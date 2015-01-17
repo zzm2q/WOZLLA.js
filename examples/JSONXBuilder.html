@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SpriteRenderer | WOZLLA.js</title>
+</head>
+<body>
+<canvas id="canvas" width="500" height="500" style="border: 1px solid #999;"></canvas>
+<script type="text/javascript" src="../build/dist/WOZLLA.all.js"></script>
+<script type="text/javascript">
+    var director = new WOZLLA.Director(document.getElementById('canvas'));
+
+    var json = {
+        root: {
+            name: 'test',
+            active : true,
+            visible: true,
+            touchable: false,
+            transform: {
+                x: 0,
+                y: 0
+            },
+            components: [{
+                name: 'SpriteRenderer',
+                property: {
+                    sprite: 'images/bag.tt.json#close.png'
+                }
+            }],
+            children: [{
+                name: 'G2',
+                reference: 'resources/data.json', // an reference
+                active : true,
+                visible: true,
+                touchable: false,
+                transform: {
+                    x: 100,
+                    y: 100
+                }
+            }]
+        }
+    };
+
+    var jsonXBuilder = new WOZLLA.jsonx.JSONXBuilder();
+    jsonXBuilder
+        .instantiateWithJSON(json)
+        .load()
+        .init()
+        .build(function(err, root) {
+            director.stage.addChild(root);
+            director.runStep();
+        });
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+.idea
+src/*/**.js
+.DS_Store
+examples/test.html
+tools/editor/Atom.app
+tools
+

@@ -1,0 +1,21 @@
+{
+    "name": "WOZLLA.js",
+    "description": "a great game engine",
+    "keywords": [
+        "wozlla",
+        "js",
+        "javascript",
+        "typescript",
+        "game",
+        "engine"
+    ],
+    "author": {
+        "name": "wozlla.com",
+        "email": "xiaoming@wozlla.com"
+    },
+    "version": "0.0.1",
+    "dependencies": {},
+    "devDependencies": {
+        "phantom-jasmine": "0.3.0"
+    }
+}

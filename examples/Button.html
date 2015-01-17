@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button | WOZLLA.js</title>
+</head>
+<body>
+<canvas id="canvas" width="500" height="500" style="border: 1px solid #999;"></canvas>
+<script type="text/javascript" src="../build/dist/WOZLLA.all.js"></script>
+<script type="text/javascript">
+    var director = new WOZLLA.Director(document.getElementById('canvas'));
+    director.start();
+    director.assetLoader.load('images/bag.tt.json', WOZLLA.assets.SpriteAtlas, function() {
+        var spriteAtlas = director.assetLoader.getAsset('images/bag.tt.json');
+        var gameObj = new WOZLLA.GameObject();
+
+        var spriteRenderer = new WOZLLA.component.SpriteRenderer();
+        spriteRenderer.sprite = spriteAtlas.getSprite('close.png');
+        spriteRenderer.spriteOffset = { x: 0.5, y: 0.5 };
+        gameObj.addComponent(spriteRenderer);
+
+        var button = new WOZLLA.ui.Button();
+        button.spriteAtlas = spriteAtlas;
+        button.normalSpriteName = 'close.png';
+        button.pressedSpriteName = 'close_h.png';
+        gameObj.addComponent(button);
+
+        var rectCollider = WOZLLA.component.RectCollider.fromSpriteRenderer(spriteRenderer);
+        gameObj.addComponent(rectCollider);
+
+        gameObj.touchable = true;
+        gameObj.init();
+        gameObj.transform.setPosition(100, 100);
+        director.stage.addChild(gameObj);
+    });
+</script>
+</body>
+</html>
