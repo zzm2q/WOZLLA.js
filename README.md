@@ -39,5 +39,5 @@ Version 2.0
 
 ## Bug Reporting
 
-Please report [issues](https://github.com/photonstorm/phaser/issues) with as much info as possible.
+Please report [issues](https://github.com/zzm2q/WOZLLA.js/issues) with as much info as possible.
 
