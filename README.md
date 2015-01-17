@@ -33,7 +33,7 @@ Version 1.5
 * Sound System
 
 Version 2.0
-* Enhance the JSON file of GameObject structure, so you could load simply build a GameObject tree with JSON file.
+* Enhance the JSON file of GameObject structure, so you could simply build a GameObject tree with JSON file.
 * Provide a Editor for Visual Editing
 
 
