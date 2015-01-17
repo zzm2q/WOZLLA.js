@@ -3,9 +3,9 @@
 **WOZLLA.js** is a JavaScript/TypeScript 2D Game Engine, it aims to provide a complete solution for HTML5
 games creation. It uses WebGL for 2D rendering and is NOT compatible with Canvas2D.
 
-## Features Now
+## Current Features
 
-Version 0.5.1 Released
+Version 0.5.1 (Released)
 
 * WebGL Rendering
 * Assets Management
