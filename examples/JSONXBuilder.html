@@ -22,21 +22,12 @@
             components: [{
                 name: 'SpriteRenderer',
                 properties: {
-                    spriteSrc: 'images/bag.tt.json#close.png',
+                    spriteAtlasSrc: 'images/bag.tt.json',
+                    spriteName: 'close.png',
                     color: 0xFFFFFF
                 }
             }],
-            children: [{
-                name: 'G2',
-                reference: 'resources/data.json', // an reference
-                active : true,
-                visible: true,
-                touchable: false,
-                transform: {
-                    x: 100,
-                    y: 100
-                }
-            }]
+            children: []
         }
     };
 
