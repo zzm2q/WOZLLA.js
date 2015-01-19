@@ -78,7 +78,7 @@ module WOZLLA {
 
         /**
          * get the root instance of RectTransform
-         * @returns {WOZLLA.RectTransform}
+         * @returns {WOZLLA.RectTransform} viewRectTransform
          */
         get viewRectTransform():WOZLLA.RectTransform { return this._stage.viewRectTransform; }
 
