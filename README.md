@@ -72,3 +72,5 @@ Version 2.0
 
 Please report [issues](https://github.com/zzm2q/WOZLLA.js/issues) with as much info as possible.
 
+## MIT License
+
