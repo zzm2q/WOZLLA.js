@@ -43,9 +43,15 @@ module WOZLLA.component {
         get spriteOffset():any { return this._getTextureOffset(); }
         set spriteOffset(value) { this.setTextureOffset(value); }
 
-        get spriteAtlasSrc():string { return this._spriteSrc; }
+        get imageSrc():string { return this._spriteAtlasSrc; }
+        set imageSrc(value:string) {
+            this.spriteAtlasSrc = value;
+            this.spriteName = null;
+        }
+
+        get spriteAtlasSrc():string { return this._spriteAtlasSrc; }
         set spriteAtlasSrc(value:string) {
-            this._spriteSrc = value;
+            this._spriteAtlasSrc = value;
             this._spriteProxy.setAssetSrc(value);
         }
 
@@ -57,7 +63,7 @@ module WOZLLA.component {
 
         _spriteProxy:WOZLLA.assets.proxy.SpriteAtlasProxy;
         _sprite:WOZLLA.assets.Sprite;
-        _spriteSrc:string;
+        _spriteAtlasSrc:string;
         _spriteName:string;
 
         constructor() {
