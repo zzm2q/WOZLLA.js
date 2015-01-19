@@ -176,8 +176,7 @@ module WOZLLA.jsonx {
         }
 
         private _loadAssets(callback:Function) {
-            // TODO how to load assets? the key.
-            callback && callback();
+            this.root.loadAssets(callback);
         }
 
         private _init() {

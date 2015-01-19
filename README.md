@@ -63,6 +63,7 @@ Version 0.5.1 (Released)
 
 ## Change Logs
 
+* Auto Assets Management
 * Support DragonBones
 * Version 0.5.1 (Released)
 

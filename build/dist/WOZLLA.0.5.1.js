@@ -1881,7 +1881,14 @@ var WOZLLA;
             WOZLLA.Assert.isObject(config);
             WOZLLA.Assert.isString(config.name);
             WOZLLA.Assert.isUndefined(Component.configMap[config.name]);
-            Component.configMap[config.name] = ctor;
+            Component.ctorMap[config.name] = ctor;
+            Component.configMap[config.name] = config;
+        };
+        Component.unregister = function (name) {
+            WOZLLA.Assert.isString(name);
+            WOZLLA.Assert.isNotUndefined(Component.configMap[name]);
+            delete Component.ctorMap[name];
+            delete Component.configMap[name];
         };
         /**
          * create component by it's registed name.
@@ -1890,7 +1897,7 @@ var WOZLLA;
          */
         Component.create = function (name) {
             WOZLLA.Assert.isString(name);
-            var ctor = Component.configMap[name];
+            var ctor = Component.ctorMap[name];
             WOZLLA.Assert.isFunction(ctor);
             return new ctor();
         };
@@ -1901,6 +1908,7 @@ var WOZLLA;
             WOZLLA.Assert.isNotUndefined(config);
             return config;
         };
+        Component.ctorMap = {};
         Component.configMap = {};
         return Component;
     })(WOZLLA.event.EventDispatcher);
@@ -5710,7 +5718,10 @@ var WOZLLA;
                 name: 'color',
                 type: 'int'
             }, {
-                name: 'spriteSrc',
+                name: 'spriteAtlasSrc',
+                type: 'string'
+            }, {
+                name: 'spriteName',
                 type: 'string'
             }]
         });
@@ -6217,8 +6228,7 @@ var WOZLLA;
                 return component;
             };
             JSONXBuilder.prototype._loadAssets = function (callback) {
-                // TODO how to load assets? the key.
-                callback && callback();
+                this.root.loadAssets(callback);
             };
             JSONXBuilder.prototype._init = function () {
                 this.root.init();

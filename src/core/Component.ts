@@ -43,6 +43,7 @@ module WOZLLA {
             return [];
         }
 
+        private static ctorMap:any = {};
         private static configMap:any = {};
 
         /**
@@ -56,7 +57,15 @@ module WOZLLA {
             Assert.isObject(config);
             Assert.isString(config.name);
             Assert.isUndefined(Component.configMap[config.name]);
-            Component.configMap[config.name] = ctor;
+            Component.ctorMap[config.name] = ctor;
+            Component.configMap[config.name] = config;
+        }
+
+        public static unregister(name:string) {
+            Assert.isString(name);
+            Assert.isNotUndefined(Component.configMap[name]);
+            delete Component.ctorMap[name];
+            delete Component.configMap[name];
         }
 
         /**
@@ -66,7 +75,7 @@ module WOZLLA {
          */
         public static create(name:string):WOZLLA.Component {
             Assert.isString(name);
-            var ctor:Function = Component.configMap[name];
+            var ctor:Function = Component.ctorMap[name];
             Assert.isFunction(ctor);
             return <WOZLLA.Component>new (<any>ctor)();
         }

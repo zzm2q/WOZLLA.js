@@ -683,6 +683,7 @@ declare module WOZLLA {
         destroy(): void;
         loadAssets(callback: Function): void;
         listRequiredComponents(): Function[];
+        private static ctorMap;
         private static configMap;
         /**
          * register an component class and it's configuration
@@ -692,6 +693,7 @@ declare module WOZLLA {
          * @param configuration
          */
         static register(ctor: Function, config: any): void;
+        static unregister(name: string): void;
         /**
          * create component by it's registed name.
          * @param name the component name

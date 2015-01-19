@@ -8,6 +8,7 @@
 <script type="text/javascript" src="WOZLLA.all.js"></script>
 <script type="text/javascript">
     var director = new WOZLLA.Director(document.getElementById('canvas'));
+    director.start();
 
     var json = {
         root: {
@@ -38,7 +39,6 @@
         .init()
         .build(function(err, root) {
             director.stage.addChild(root);
-            director.runStep();
         });
 </script>
 </body>

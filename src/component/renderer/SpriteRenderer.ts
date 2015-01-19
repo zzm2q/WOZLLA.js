@@ -84,7 +84,10 @@ module WOZLLA.component {
             name: 'color',
             type: 'int'
         }, {
-            name: 'spriteSrc',
+            name: 'spriteAtlasSrc',
+            type: 'string'
+        }, {
+            name: 'spriteName',
             type: 'string'
         }]
     });
