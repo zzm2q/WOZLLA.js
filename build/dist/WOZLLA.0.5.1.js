@@ -1358,6 +1358,7 @@ var WOZLLA;
         Transform.prototype.transform = function (parentTransform) {
             if (parentTransform === void 0) { parentTransform = null; }
             var cos, sin, r;
+            var matrix;
             var worldMatrix = this.worldMatrix;
             var x = this._values[0];
             var y = this._values[1];
@@ -1382,6 +1383,12 @@ var WOZLLA;
                 else {
                     worldMatrix.applyMatrix(parentTransform.worldMatrix);
                 }
+            }
+            if (this.__local_matrix) {
+                matrix = this.__local_matrix;
+                worldMatrix.append(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+                this._dirty = false;
+                return;
             }
             if (rotation % 360) {
                 r = rotation * Transform.DEG_TO_RAD;
@@ -2053,6 +2060,19 @@ var WOZLLA;
              */
             get: function () {
                 return this._children.slice(0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(GameObject.prototype, "childCount", {
+            /**
+             * get child count
+             * @property {number} childCount
+             * @member WOZLLA.GameObject
+             * @readonly
+             */
+            get: function () {
+                return this._children.length;
             },
             enumerable: true,
             configurable: true
@@ -4462,11 +4482,15 @@ var WOZLLA;
                 }
                 frameData = this._spriteData.frames[name];
                 if (frameData) {
+                    if (typeof frameData.frame.width === 'undefined') {
+                        frameData.frame.width = frameData.frame.w;
+                        frameData.frame.height = frameData.frame.h;
+                    }
                     sprite = new assets.Sprite(this, {
                         x: frameData.frame.x,
                         y: frameData.frame.y,
-                        width: frameData.frame.w,
-                        height: frameData.frame.h
+                        width: frameData.frame.width,
+                        height: frameData.frame.height
                     }, name);
                     this._spriteCache[name] = sprite;
                     return sprite;
@@ -6767,4 +6791,189 @@ var WOZLLA;
         })();
         utils.Ease = Ease;
     })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../../libs/DragonBones.d.ts"/>
+/// <reference path="../../src/core/GameObject.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var DragonBones;
+    (function (DragonBones) {
+        var WSlot = (function (_super) {
+            __extends(WSlot, _super);
+            function WSlot() {
+                _super.call(this, this);
+                this._display = null;
+            }
+            WSlot.prototype.dispose = function () {
+                if (this._display) {
+                    this._display.destroy();
+                    this._display.removeMe();
+                }
+                _super.prototype.dispose.call(this);
+                this._display = null;
+            };
+            /** @private */
+            WSlot.prototype._updateDisplay = function (value) {
+                this._display = value;
+            };
+            //Abstract method
+            /** @private */
+            WSlot.prototype._getDisplayIndex = function () {
+                return -1;
+            };
+            /** @private */
+            WSlot.prototype._addDisplayToContainer = function (container, index) {
+                if (index === void 0) { index = -1; }
+                var gameObjContainer = container;
+                if (this._display && gameObjContainer) {
+                    gameObjContainer.addChild(this._display);
+                }
+            };
+            /** @private */
+            WSlot.prototype._removeDisplayFromContainer = function () {
+                if (this._display && this._display.parent) {
+                    this._display.parent.removeChild(this._display);
+                }
+            };
+            /** @private */
+            WSlot.prototype._updateTransform = function () {
+                var trans;
+                if (this._display) {
+                    trans = this._display.transform;
+                    trans.__local_matrix = this._globalTransformMatrix;
+                    trans.dirty = true;
+                }
+            };
+            /** @private */
+            WSlot.prototype._updateDisplayVisible = function (value) {
+                if (this._display && this._parent) {
+                    this._display.visible = this._parent._visible && this._visible && value;
+                }
+            };
+            /** @private */
+            WSlot.prototype._updateDisplayColor = function (aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier) {
+                _super.prototype._updateDisplayColor.call(this, aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier);
+                if (this._display) {
+                    var spriteRenderer = this._display.renderer;
+                    if (spriteRenderer) {
+                        spriteRenderer.alpha = aMultiplier;
+                    }
+                }
+            };
+            /** @private */
+            WSlot.prototype._updateDisplayBlendMode = function (value) {
+                if (this._display && value) {
+                }
+            };
+            return WSlot;
+        })(dragonBones.Slot);
+        DragonBones.WSlot = WSlot;
+    })(DragonBones = WOZLLA.DragonBones || (WOZLLA.DragonBones = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../../libs/DragonBones.d.ts"/>
+/// <reference path="../../src/assets/SpriteAtlas.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var DragonBones;
+    (function (DragonBones) {
+        function getFileName(url) {
+            var idx = url.lastIndexOf('/');
+            if (idx !== -1) {
+                return url.substr(idx + 1, url.length);
+            }
+            return url;
+        }
+        var WTextureAtlas = (function (_super) {
+            __extends(WTextureAtlas, _super);
+            function WTextureAtlas() {
+                _super.apply(this, arguments);
+            }
+            WTextureAtlas.prototype.dispose = function () {
+            };
+            WTextureAtlas.prototype.getRegion = function (subTextureName) {
+                var sprite = this.getSprite(subTextureName);
+                var frame = sprite.frame;
+                return new dragonBones.Rectangle(frame.x, frame.y, frame.width, frame.height);
+            };
+            WTextureAtlas.prototype._loadSpriteAtlas = function (callback) {
+                var _this = this;
+                WOZLLA.utils.Ajax.request({
+                    url: this._metaSrc,
+                    contentType: 'json',
+                    success: function (data) {
+                        var imageSuffix = data.imagePath;
+                        var metaFileName = getFileName(_this._metaSrc);
+                        _this._imageSrc = _this._metaSrc.replace(new RegExp(metaFileName + '$'), imageSuffix);
+                        _this._loadImage(function (error, image) {
+                            if (error) {
+                                callback && callback(error);
+                            }
+                            else {
+                                var textureData = _this._parseData(data);
+                                _this.name = textureData.name;
+                                callback && callback(null, image, textureData);
+                            }
+                        });
+                    },
+                    error: function (err) {
+                        callback('Fail to load sprite: ' + _this._metaSrc + ', ' + err.code + ':' + err.message);
+                    }
+                });
+            };
+            WTextureAtlas.prototype._parseData = function (data) {
+                var spriteData = {
+                    name: data.name,
+                    frames: {}
+                };
+                data.SubTexture.forEach(function (frameData) {
+                    spriteData.frames[frameData.name] = { frame: frameData };
+                });
+                return spriteData;
+            };
+            return WTextureAtlas;
+        })(WOZLLA.assets.SpriteAtlas);
+        DragonBones.WTextureAtlas = WTextureAtlas;
+    })(DragonBones = WOZLLA.DragonBones || (WOZLLA.DragonBones = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../../libs/DragonBones.d.ts"/>
+/// <reference path="WSlot.ts"/>
+/// <reference path="WTextureAtlas.ts"/>
+/// <reference path="../../src/core/GameObject.ts"/>
+/// <reference path="../../src/component/renderer/SpriteRenderer.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var DragonBones;
+    (function (DragonBones) {
+        var WFactory = (function (_super) {
+            __extends(WFactory, _super);
+            function WFactory() {
+                _super.call(this, this);
+            }
+            /** @private */
+            WFactory.prototype._generateArmature = function () {
+                var container = new WOZLLA.GameObject();
+                container.init();
+                return new dragonBones.Armature(container);
+            };
+            /** @private */
+            WFactory.prototype._generateSlot = function () {
+                return new DragonBones.WSlot();
+            };
+            /** @private */
+            WFactory.prototype._generateDisplay = function (textureAtlas, fullName, pivotX, pivotY) {
+                var gameObj = new WOZLLA.GameObject();
+                var spriteRenderer = new WOZLLA.component.SpriteRenderer();
+                spriteRenderer.sprite = textureAtlas.getSprite(fullName);
+                spriteRenderer.spriteOffset = {
+                    x: pivotX / spriteRenderer.sprite.frame.width,
+                    y: pivotY / spriteRenderer.sprite.frame.height
+                };
+                gameObj.addComponent(spriteRenderer);
+                gameObj.init();
+                return gameObj;
+            };
+            return WFactory;
+        })(dragonBones.BaseFactory);
+        DragonBones.WFactory = WFactory;
+    })(DragonBones = WOZLLA.DragonBones || (WOZLLA.DragonBones = {}));
 })(WOZLLA || (WOZLLA = {}));

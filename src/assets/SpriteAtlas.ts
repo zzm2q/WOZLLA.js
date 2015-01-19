@@ -88,11 +88,15 @@ module WOZLLA.assets {
             }
             frameData = this._spriteData.frames[name];
             if(frameData) {
+                if(typeof frameData.frame.width === 'undefined') {
+                    frameData.frame.width = frameData.frame.w;
+                    frameData.frame.height = frameData.frame.h;
+                }
                 sprite = new Sprite(this, {
                     x: frameData.frame.x,
                     y: frameData.frame.y,
-                    width: frameData.frame.w,
-                    height: frameData.frame.h
+                    width: frameData.frame.width,
+                    height: frameData.frame.height
                 }, name);
                 this._spriteCache[name] = sprite;
                 return sprite;

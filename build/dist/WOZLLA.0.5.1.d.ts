@@ -1,4 +1,5 @@
 /// <reference path="../../libs/hammerjs.d.ts" />
+/// <reference path="../../libs/DragonBones.d.ts" />
 declare module WOZLLA.event {
     /**
      * @enum {number} WOZLLA.event.EventPhase
@@ -458,6 +459,7 @@ declare module WOZLLA {
      * @class WOZLLA.Transform
      */
     class Transform {
+        __local_matrix: any;
         /**
          * @property {number} DEG_TO_RAD
          * @readonly
@@ -777,6 +779,13 @@ declare module WOZLLA {
          * @readonly
          */
         children: GameObject[];
+        /**
+         * get child count
+         * @property {number} childCount
+         * @member WOZLLA.GameObject
+         * @readonly
+         */
+        childCount: number;
         /**
          * get or set z order of this game object, and then resort children.
          * @property {number} z
@@ -2371,5 +2380,48 @@ declare module WOZLLA.utils {
             30: string;
         };
         static getByKey(key: any): any;
+    }
+}
+declare module WOZLLA.DragonBones {
+    class WSlot extends dragonBones.Slot {
+        private _display;
+        constructor();
+        dispose(): void;
+        /** @private */
+        _updateDisplay(value: any): void;
+        /** @private */
+        _getDisplayIndex(): number;
+        /** @private */
+        _addDisplayToContainer(container: any, index?: number): void;
+        /** @private */
+        _removeDisplayFromContainer(): void;
+        /** @private */
+        _updateTransform(): void;
+        /** @private */
+        _updateDisplayVisible(value: boolean): void;
+        /** @private */
+        _updateDisplayColor(aOffset: number, rOffset: number, gOffset: number, bOffset: number, aMultiplier: number, rMultiplier: number, gMultiplier: number, bMultiplier: number): void;
+        /** @private */
+        _updateDisplayBlendMode(value: string): void;
+    }
+}
+declare module WOZLLA.DragonBones {
+    class WTextureAtlas extends assets.SpriteAtlas implements dragonBones.ITextureAtlas {
+        name: string;
+        dispose(): void;
+        getRegion(subTextureName: string): dragonBones.Rectangle;
+        _loadSpriteAtlas(callback: (error: string, image?: any, spriteData?: any) => any): void;
+        _parseData(data: any): any;
+    }
+}
+declare module WOZLLA.DragonBones {
+    class WFactory extends dragonBones.BaseFactory {
+        constructor();
+        /** @private */
+        _generateArmature(): dragonBones.Armature;
+        /** @private */
+        _generateSlot(): dragonBones.Slot;
+        /** @private */
+        _generateDisplay(textureAtlas: WTextureAtlas, fullName: string, pivotX: number, pivotY: number): any;
     }
 }

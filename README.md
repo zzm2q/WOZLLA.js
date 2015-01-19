@@ -54,10 +54,17 @@ Version 0.5.1 (Released)
 * Transform and Tween
 * Event System
 * Graphics: Sprite/NinePatch/Mask
+* Animation: DragonBones
 * UI widget: Button/CheckBox
 
 ## API References
 [API References](http://zzm2q.github.io/WOZLLA.js/docs/api/template.html)
+
+
+## Change Logs
+
+* Support DragonBones
+* Version 0.5.1 (Released)
 
 ## RoadMap
 

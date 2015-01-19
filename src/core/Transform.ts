@@ -10,6 +10,9 @@ module WOZLLA {
      */
     export class Transform {
 
+        // for dragonbone
+        public __local_matrix:any;
+
         /**
          * @property {number} DEG_TO_RAD
          * @readonly
@@ -189,6 +192,7 @@ module WOZLLA {
 
         transform(parentTransform:Transform=null) {
             var cos, sin, r;
+            var matrix;
             var worldMatrix = this.worldMatrix;
             var x = this._values[0];
             var y = this._values[1];
@@ -213,6 +217,13 @@ module WOZLLA {
                 } else {
                     worldMatrix.applyMatrix(parentTransform.worldMatrix);
                 }
+            }
+
+            if(this.__local_matrix) {
+                matrix = this.__local_matrix;
+                worldMatrix.append(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+                this._dirty = false;
+                return;
             }
 
             if (rotation%360) {

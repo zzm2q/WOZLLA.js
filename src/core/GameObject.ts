@@ -94,6 +94,14 @@ module WOZLLA {
         get children():GameObject[] { return this._children.slice(0); }
 
         /**
+         * get child count
+         * @property {number} childCount
+         * @member WOZLLA.GameObject
+         * @readonly
+         */
+        get childCount():number { return this._children.length; }
+
+        /**
          * get or set z order of this game object, and then resort children.
          * @property {number} z
          * @member WOZLLA.GameObject

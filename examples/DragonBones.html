@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DragonBones | WOZLLA.js</title>
+</head>
+<body>
+<canvas id="canvas" width="960" height="640" style="border: 1px solid #999;"></canvas>
+<script type="text/javascript" src="WOZLLA.all.js"></script>
+<script type="text/javascript">
+    var director = new WOZLLA.Director(document.getElementById('canvas'));
+    director.start();
+
+    WOZLLA.utils.Ajax.request({
+        url: 'resources/skeleton2.json',
+        contentType: 'json',
+        success: function(skeletonData) {
+            director.assetLoader.load('resources/texture2.json', WOZLLA.DragonBones.WTextureAtlas, function() {
+                var wTextureAtlas = director.assetLoader.getAsset('resources/texture2.json');
+                var factory = new WOZLLA.DragonBones.WFactory();
+                factory.addSkeletonData(dragonBones.DataParser.parseDragonBonesData(skeletonData), skeletonData.name);
+                factory.addTextureAtlas(wTextureAtlas, wTextureAtlas.name);
+                console.log(skeletonData);
+                var armature = factory.buildArmature('dragonBoy');
+                var container = armature.getDisplay();
+                container.transform.setPosition(300, 300);
+                container.transform.setScale(0.5, 0.5);
+                armature.animation.gotoAndPlay('stand');
+                dragonBones.WorldClock.clock.add(armature);
+
+                director.stage.addChild(armature.getDisplay());
+                director.scheduler.scheduleLoop(function() {
+                    dragonBones.WorldClock.clock.advanceTime(1/60);
+                });
+            });
+        }
+    });
+</script>
+</body>
+</html>
