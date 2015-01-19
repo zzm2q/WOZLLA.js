@@ -5,9 +5,10 @@ module WOZLLA {
     /**
      * Top class of all components
      * @class WOZLLA.Component
+     * @extends WOZLLA.event.EventDispatcher
      * @abstract
      */
-    export class Component {
+    export class Component extends WOZLLA.event.EventDispatcher {
 
         /**
          * get the GameObject of this component belongs to.
