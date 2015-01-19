@@ -19,7 +19,7 @@
                 var factory = new WOZLLA.DragonBones.WFactory();
                 factory.addSkeletonData(dragonBones.DataParser.parseDragonBonesData(skeletonData), skeletonData.name);
                 factory.addTextureAtlas(wTextureAtlas, wTextureAtlas.name);
-                console.log(skeletonData);
+
                 var armature = factory.buildArmature('dragonBoy');
                 var container = armature.getDisplay();
                 container.transform.setPosition(300, 300);
