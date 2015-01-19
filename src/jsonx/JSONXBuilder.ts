@@ -114,8 +114,7 @@ module WOZLLA.jsonx {
             var components:Array<any> = data.components;
             if(components && components.length > 0) {
                 components.forEach((compData:any) => {
-                    var component = WOZLLA.Component.create(compData.name);
-                    gameObj.addComponent(component);
+                    gameObj.addComponent(this._newComponent(compData));
                 });
             }
 
@@ -164,6 +163,16 @@ module WOZLLA.jsonx {
                 }
                 callback(root);
             });
+        }
+
+        private _newComponent(compData:any) {
+            var component = WOZLLA.Component.create(compData.name);
+            var config = WOZLLA.Component.getConfig(compData.name);
+            config.properties.forEach((prop) => {
+                var value = compData.properties[prop.name];
+                component[prop.name] =  typeof value === 'undefined' ? prop.defaultValue : value;
+            });
+            return component;
         }
 
         private _loadAssets(callback:Function) {

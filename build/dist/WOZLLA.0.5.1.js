@@ -1823,10 +1823,13 @@ var WOZLLA;
     /**
      * Top class of all components
      * @class WOZLLA.Component
+     * @extends WOZLLA.event.EventDispatcher
      * @abstract
      */
-    var Component = (function () {
+    var Component = (function (_super) {
+        __extends(Component, _super);
         function Component() {
+            _super.apply(this, arguments);
         }
         Object.defineProperty(Component.prototype, "gameObject", {
             /**
@@ -1861,6 +1864,9 @@ var WOZLLA;
          */
         Component.prototype.destroy = function () {
         };
+        Component.prototype.loadAssets = function (callback) {
+            callback && callback();
+        };
         Component.prototype.listRequiredComponents = function () {
             return [];
         };
@@ -1871,11 +1877,11 @@ var WOZLLA;
          * @param ctor
          * @param configuration
          */
-        Component.register = function (ctor, configuration) {
-            WOZLLA.Assert.isObject(configuration);
-            WOZLLA.Assert.isString(configuration.name);
-            WOZLLA.Assert.isUndefined(Component.configMap[configuration.name]);
-            Component.configMap[configuration.name] = ctor;
+        Component.register = function (ctor, config) {
+            WOZLLA.Assert.isObject(config);
+            WOZLLA.Assert.isString(config.name);
+            WOZLLA.Assert.isUndefined(Component.configMap[config.name]);
+            Component.configMap[config.name] = ctor;
         };
         /**
          * create component by it's registed name.
@@ -1883,13 +1889,21 @@ var WOZLLA;
          * @returns {WOZLLA.Component}
          */
         Component.create = function (name) {
+            WOZLLA.Assert.isString(name);
             var ctor = Component.configMap[name];
             WOZLLA.Assert.isFunction(ctor);
             return new ctor();
         };
+        Component.getConfig = function (name) {
+            var config;
+            WOZLLA.Assert.isString(name);
+            config = Component.configMap[name];
+            WOZLLA.Assert.isNotUndefined(config);
+            return config;
+        };
         Component.configMap = {};
         return Component;
-    })();
+    })(WOZLLA.event.EventDispatcher);
     WOZLLA.Component = Component;
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="Component.ts"/>
@@ -1959,6 +1973,7 @@ var WOZLLA;
             this._initialized = false;
             this._destroyed = false;
             this._touchable = false;
+            this._loadingAssets = false;
             this._name = 'GameObject';
             this._children = [];
             this._components = [];
@@ -2615,6 +2630,31 @@ var WOZLLA;
         GameObject.prototype.testHit = function (localX, localY) {
             var collider = this._collider;
             return collider && collider.collideXY(localX, localY);
+        };
+        GameObject.prototype.loadAssets = function (callback) {
+            var i, len, count, comp;
+            if (this._loadingAssets)
+                return;
+            count = this._components.length + this._children.length;
+            if (count === 0) {
+                callback && callback();
+                return;
+            }
+            for (i = 0, len = this._components.length; i < len; i++) {
+                comp = this._components[i];
+                comp.loadAssets(function () {
+                    if (--count === 0) {
+                        callback && callback();
+                    }
+                });
+            }
+            for (i = 0, len = this._children.length; i < len; i++) {
+                this._children[i].loadAssets(function () {
+                    if (--count === 0) {
+                        callback && callback();
+                    }
+                });
+            }
         };
         GameObject.prototype.checkComponentDependency = function (comp) {
             var Type;
@@ -5987,8 +6027,7 @@ var WOZLLA;
                 var components = data.components;
                 if (components && components.length > 0) {
                     components.forEach(function (compData) {
-                        var component = WOZLLA.Component.create(compData.name);
-                        gameObj.addComponent(component);
+                        gameObj.addComponent(_this._newComponent(compData));
                     });
                 }
                 var createdChildCount = 0;
@@ -6037,6 +6076,15 @@ var WOZLLA;
                     }
                     callback(root);
                 });
+            };
+            JSONXBuilder.prototype._newComponent = function (compData) {
+                var component = WOZLLA.Component.create(compData.name);
+                var config = WOZLLA.Component.getConfig(compData.name);
+                config.properties.forEach(function (prop) {
+                    var value = compData.properties[prop.name];
+                    component[prop.name] = typeof value === 'undefined' ? prop.defaultValue : value;
+                });
+                return component;
             };
             JSONXBuilder.prototype._loadAssets = function (callback) {
                 // TODO how to load assets? the key.
