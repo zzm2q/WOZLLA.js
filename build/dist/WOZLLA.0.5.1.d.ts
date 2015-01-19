@@ -1978,11 +1978,12 @@ declare module WOZLLA.component {
         renderOrder: number;
         sprite: assets.Sprite;
         spriteOffset: any;
+        imageSrc: string;
         spriteAtlasSrc: string;
         spriteName: string;
         _spriteProxy: assets.proxy.SpriteAtlasProxy;
         _sprite: assets.Sprite;
-        _spriteSrc: string;
+        _spriteAtlasSrc: string;
         _spriteName: string;
         constructor();
         onAssetLoaded(asset: assets.Asset): void;

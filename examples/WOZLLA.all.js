@@ -13960,12 +13960,23 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(SpriteRenderer.prototype, "spriteAtlasSrc", {
+            Object.defineProperty(SpriteRenderer.prototype, "imageSrc", {
                 get: function () {
-                    return this._spriteSrc;
+                    return this._spriteAtlasSrc;
                 },
                 set: function (value) {
-                    this._spriteSrc = value;
+                    this.spriteAtlasSrc = value;
+                    this.spriteName = null;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SpriteRenderer.prototype, "spriteAtlasSrc", {
+                get: function () {
+                    return this._spriteAtlasSrc;
+                },
+                set: function (value) {
+                    this._spriteAtlasSrc = value;
                     this._spriteProxy.setAssetSrc(value);
                 },
                 enumerable: true,

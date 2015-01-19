@@ -6,40 +6,25 @@ games creation. It uses WebGL for 2D rendering and is NOT compatible with Canvas
 ## Getting Started
 
 ```javascript
-// create a director
+// create director and start main loop
 var director = new WOZLLA.Director(document.getElementById('canvas'));
+director.start();
 
-// load an image as a SpriteAtlas
-director.assetLoader.load('images/panda.png', WOZLLA.assets.SpriteAtlas, function() {
-    var spriteAtlas = director.assetLoader.getAsset('images/panda.png');
+// new a GameObject
+var gameObj = new WOZLLA.GameObject();
+// create a sprite renderer
+var spriteRenderer = new WOZLLA.component.SpriteRenderer();
+// set image src
+spriteRenderer.imageSrc = 'images/panda.png';
+// add to gameObj
+gameObj.addComponent(spriteRenderer);
 
-    // create a GameObject
-    var gameObj = new WOZLLA.GameObject();
-
-    // create a SpriteRenderer
-    var spriteRenderer = new WOZLLA.component.SpriteRenderer();
-    spriteRenderer.sprite = spriteAtlas.getSprite();
-    spriteRenderer.spriteOffset = {x: 0.5, y: 0.5};
-
-    // add to the game object
-    gameObj.addComponent(spriteRenderer);
-
+// this would automatically load all assets of gameObj, children and children's children.
+gameObj.loadAssets(function() {
+    // init gameObj
     gameObj.init();
-    gameObj.transform.setPosition(200, 300);
+    // add to stage
     director.stage.addChild(gameObj);
-
-    // update transform of the game object and the properties of spriteRenderer each frame
-    director.scheduler.scheduleLoop(function() {
-        gameObj.transform.rotation++;
-        spriteRenderer.color = Math.ceil(Math.random() * 0xFFFFFF);
-        spriteRenderer.alpha -= 0.01;
-        if(spriteRenderer.alpha < 0) {
-            spriteRenderer.alpha = 1;
-        }
-    });
-
-    // run main loop
-    director.start();
 });
 ```
 
@@ -48,14 +33,14 @@ director.assetLoader.load('images/panda.png', WOZLLA.assets.SpriteAtlas, functio
 Version 0.5.1 (Released)
 
 * WebGL Rendering
-* Assets Management
-* Touch Input
 * GameObject and Component
 * Transform and Tween
 * Event System
+* Touch Input
 * Graphics: Sprite/NinePatch/Mask
 * Animation: DragonBones
 * UI widget: Button/CheckBox
+* Automatically Assets Management
 
 ## API References
 [API References](http://zzm2q.github.io/WOZLLA.js/docs/api/template.html)
