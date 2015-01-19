@@ -657,9 +657,10 @@ declare module WOZLLA {
     /**
      * Top class of all components
      * @class WOZLLA.Component
+     * @extends WOZLLA.event.EventDispatcher
      * @abstract
      */
-    class Component {
+    class Component extends event.EventDispatcher {
         /**
          * get the GameObject of this component belongs to.
          * @property {WOZLLA.GameObject} gameObject
@@ -680,6 +681,7 @@ declare module WOZLLA {
          * destroy this component
          */
         destroy(): void;
+        loadAssets(callback: Function): void;
         listRequiredComponents(): Function[];
         private static configMap;
         /**
@@ -689,13 +691,14 @@ declare module WOZLLA {
          * @param ctor
          * @param configuration
          */
-        static register(ctor: Function, configuration: any): void;
+        static register(ctor: Function, config: any): void;
         /**
          * create component by it's registed name.
          * @param name the component name
          * @returns {WOZLLA.Component}
          */
-        static create(name: any): Component;
+        static create(name: string): Component;
+        static getConfig(name: string): any;
     }
 }
 declare module WOZLLA {
@@ -863,6 +866,7 @@ declare module WOZLLA {
         _initialized: boolean;
         _destroyed: boolean;
         _touchable: boolean;
+        _loadingAssets: boolean;
         _children: GameObject[];
         _components: Component[];
         _transform: Transform;
@@ -1008,6 +1012,7 @@ declare module WOZLLA {
          * @returns {boolean}
          */
         testHit(localX: number, localY: number): boolean;
+        loadAssets(callback: Function): void;
         protected checkComponentDependency(comp: Component): boolean;
     }
 }
@@ -2028,6 +2033,7 @@ declare module WOZLLA.jsonx {
         private _newGameObjectTree(callback);
         private _newGameObject(data, callback);
         private _newReferenceObject(data, callback);
+        private _newComponent(compData);
         private _loadAssets(callback);
         private _init();
     }

@@ -200,6 +200,7 @@ module WOZLLA {
         _initialized:boolean = false;
         _destroyed:boolean = false;
         _touchable:boolean = false;
+        _loadingAssets:boolean = false;
         _children:GameObject[];
         _components:Component[];
         _transform:Transform;
@@ -634,6 +635,30 @@ module WOZLLA {
             return collider && collider.collideXY(localX, localY);
         }
 
+        public loadAssets(callback:Function) {
+            var i, len, count, comp;
+            if(this._loadingAssets) return;
+            count = this._components.length + this._children.length;
+            if(count === 0) {
+                callback && callback();
+                return;
+            }
+            for(i=0,len=this._components.length; i<len; i++) {
+                comp = this._components[i];
+                comp.loadAssets(() => {
+                    if(--count === 0) {
+                        callback && callback();
+                    }
+                });
+            }
+            for(i=0,len=this._children.length; i<len; i++) {
+                this._children[i].loadAssets(() => {
+                    if(--count === 0) {
+                        callback && callback();
+                    }
+                });
+            }
+        }
 
         protected checkComponentDependency(comp:Component):boolean {
             var Type:Function;
