@@ -26,16 +26,8 @@ module WOZLLA.ui {
             this.setStateSpriteName(CheckBox.STATE_CHECKED, spriteName);
         }
 
-        constructor() {
-            super();
-            this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
-            this._stateMachine.defineState(CheckBox.STATE_DISABLED);
-            this._stateMachine.defineState(CheckBox.STATE_CHECKED);
-        }
-
         init() {
             this._gameObject.addListener('tap', (e) => this.onTap(e));
-            this._stateMachine.init();
             super.init();
         }
 
@@ -51,6 +43,12 @@ module WOZLLA.ui {
         setEnabled(enabled:boolean=true) {
             this._stateMachine.changeState(enabled ? CheckBox.STATE_UNCHECKED : CheckBox.STATE_DISABLED);
             this._gameObject.touchable = enabled;
+        }
+
+        protected initStates():void {
+            this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
+            this._stateMachine.defineState(CheckBox.STATE_DISABLED);
+            this._stateMachine.defineState(CheckBox.STATE_CHECKED);
         }
 
         protected onTap(e) {

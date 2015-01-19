@@ -26,18 +26,10 @@ module WOZLLA.ui {
             this.setStateSpriteName(Button.STATE_PRESSED, spriteName);
         }
 
-        constructor() {
-            super();
-            this._stateMachine.defineState(Button.STATE_NORMAL, true);
-            this._stateMachine.defineState(Button.STATE_DISABLED);
-            this._stateMachine.defineState(Button.STATE_PRESSED);
-        }
-
         init() {
             this.gameObject.addListener('touch', (e) => this.onTouch(e));
             this.gameObject.addListener('release', (e) => this.onRelease(e));
             this.gameObject.addListener('tap', (e) => this.onTap(e));
-            this._stateMachine.init();
             super.init();
         }
 
@@ -53,6 +45,12 @@ module WOZLLA.ui {
         setEnabled(enabled:boolean=true) {
             this._stateMachine.changeState(enabled ? Button.STATE_NORMAL : Button.STATE_DISABLED);
             this._gameObject.touchable = enabled;
+        }
+
+        protected initStates():void {
+            this._stateMachine.defineState(Button.STATE_NORMAL, true);
+            this._stateMachine.defineState(Button.STATE_DISABLED);
+            this._stateMachine.defineState(Button.STATE_PRESSED);
         }
 
         protected onTouch(e) {
