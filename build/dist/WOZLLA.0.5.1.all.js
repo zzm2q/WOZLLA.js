@@ -12547,6 +12547,96 @@ var WOZLLA;
 (function (WOZLLA) {
     var assets;
     (function (assets) {
+        var proxy;
+        (function (proxy) {
+            var AssetProxy = (function () {
+                function AssetProxy(proxyTarget) {
+                    this.loading = false;
+                    this.proxyTarget = proxyTarget;
+                }
+                AssetProxy.prototype.setAssetSrc = function (src) {
+                    this.newAssetSrc = src;
+                };
+                AssetProxy.prototype.loadAsset = function (callback) {
+                    var _this = this;
+                    if (this.checkDirty()) {
+                        if (this.loading)
+                            return;
+                        this.loading = true;
+                        this.asset && this.asset.release();
+                        this.asset = null;
+                        this.doLoad(function (asset) {
+                            if (!asset) {
+                                _this.asset = null;
+                                callback && callback();
+                            }
+                            else if (asset.src !== _this.newAssetSrc) {
+                                asset.retain();
+                                asset.release();
+                                _this.asset = null;
+                            }
+                            else {
+                                _this.asset = asset;
+                                _this.asset.retain();
+                            }
+                            _this.loading = false;
+                            _this.proxyTarget.onAssetLoaded(asset);
+                            callback && callback();
+                        });
+                    }
+                };
+                AssetProxy.prototype.checkDirty = function () {
+                    if (!this.asset) {
+                        return !!this.newAssetSrc;
+                    }
+                    return this.newAssetSrc !== this.asset.src;
+                };
+                AssetProxy.prototype.doLoad = function (callback) {
+                    callback(null);
+                };
+                return AssetProxy;
+            })();
+            proxy.AssetProxy = AssetProxy;
+        })(proxy = assets.proxy || (assets.proxy = {}));
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
+        var proxy;
+        (function (proxy) {
+            var SpriteAtlasProxy = (function (_super) {
+                __extends(SpriteAtlasProxy, _super);
+                function SpriteAtlasProxy() {
+                    _super.apply(this, arguments);
+                }
+                SpriteAtlasProxy.prototype.getSprite = function (spriteName) {
+                    if (this.asset) {
+                        return this.asset.getSprite(spriteName);
+                    }
+                    return null;
+                };
+                SpriteAtlasProxy.prototype.doLoad = function (callback) {
+                    var src = this.newAssetSrc;
+                    if (!src) {
+                        callback(null);
+                        return;
+                    }
+                    assets.AssetLoader.getInstance().load(src, assets.SpriteAtlas, function () {
+                        callback(assets.AssetLoader.getInstance().getAsset(src));
+                    });
+                };
+                return SpriteAtlasProxy;
+            })(proxy.AssetProxy);
+            proxy.SpriteAtlasProxy = SpriteAtlasProxy;
+        })(proxy = assets.proxy || (assets.proxy = {}));
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
         /**
          * an sprite is a part of a sprite atlas
          * @class WOZLLA.assets.Sprite
@@ -13763,6 +13853,7 @@ var WOZLLA;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="QuadRenderer.ts"/>
+/// <reference path="../../assets/proxy/SpriteAtlasProxy.ts"/>
 /// <reference path="../../assets/Sprite.ts"/>
 /// <reference path="../../assets/SpriteAtlas.ts"/>
 var WOZLLA;
@@ -13775,7 +13866,8 @@ var WOZLLA;
         var SpriteRenderer = (function (_super) {
             __extends(SpriteRenderer, _super);
             function SpriteRenderer() {
-                _super.apply(this, arguments);
+                _super.call(this);
+                this._spriteProxy = new WOZLLA.assets.proxy.SpriteAtlasProxy(this);
             }
             Object.defineProperty(SpriteRenderer.prototype, "color", {
                 get: function () {
@@ -13833,6 +13925,8 @@ var WOZLLA;
                 },
                 set: function (sprite) {
                     var oldSprite = this._sprite;
+                    if (oldSprite === sprite)
+                        return;
                     this._sprite = sprite;
                     if (!sprite) {
                         this.setTexture(null);
@@ -13858,6 +13952,39 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
+            Object.defineProperty(SpriteRenderer.prototype, "spriteAtlasSrc", {
+                get: function () {
+                    return this._spriteSrc;
+                },
+                set: function (value) {
+                    this._spriteSrc = value;
+                    this._spriteProxy.setAssetSrc(value);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SpriteRenderer.prototype, "spriteName", {
+                get: function () {
+                    return this._spriteName;
+                },
+                set: function (value) {
+                    this._spriteName = value;
+                    this.sprite = this._spriteProxy.getSprite(value);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            SpriteRenderer.prototype.onAssetLoaded = function (asset) {
+                if (asset) {
+                    this.sprite = asset.getSprite(this._spriteName);
+                }
+                else {
+                    this.sprite = null;
+                }
+            };
+            SpriteRenderer.prototype.loadAssets = function (callback) {
+                this._spriteProxy.loadAsset(callback);
+            };
             return SpriteRenderer;
         })(component.QuadRenderer);
         component.SpriteRenderer = SpriteRenderer;
@@ -13866,6 +13993,9 @@ var WOZLLA;
             properties: [{
                 name: 'color',
                 type: 'int'
+            }, {
+                name: 'spriteSrc',
+                type: 'string'
             }]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
@@ -14715,28 +14845,18 @@ var WOZLLA;
         var StateWidget = (function (_super) {
             __extends(StateWidget, _super);
             function StateWidget() {
-                _super.apply(this, arguments);
+                _super.call(this);
                 this._stateMachine = new WOZLLA.utils.StateMachine();
+                this.initStates();
             }
-            Object.defineProperty(StateWidget.prototype, "spriteAtlas", {
-                get: function () {
-                    return this._spriteAtlas;
-                },
-                set: function (value) {
-                    this._spriteAtlas = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            StateWidget.prototype.listRequiredComponents = function () {
-                return [WOZLLA.component.SpriteRenderer];
-            };
             StateWidget.prototype.init = function () {
                 var _this = this;
                 this._stateMachine.addListener(StateMachine.INIT, function (e) { return _this.onStateChange(e); });
                 this._stateMachine.addListener(StateMachine.CHANGE, function (e) { return _this.onStateChange(e); });
-                this._spriteRenderer = this.gameObject.renderer;
+                this._stateMachine.init();
                 _super.prototype.init.call(this);
+            };
+            StateWidget.prototype.initStates = function () {
             };
             StateWidget.prototype.getStateSpriteName = function (state) {
                 return this._stateMachine.getStateData(state, 'spriteName');
@@ -14745,10 +14865,10 @@ var WOZLLA;
                 this._stateMachine.setStateData(state, 'spriteName', spriteName);
             };
             StateWidget.prototype.onStateChange = function (e) {
-                this._spriteRenderer.sprite = this._spriteAtlas.getSprite(this.getStateSpriteName(e.data.state));
+                this.spriteName = this.getStateSpriteName(e.data.state);
             };
             return StateWidget;
-        })(WOZLLA.Component);
+        })(WOZLLA.component.SpriteRenderer);
         ui.StateWidget = StateWidget;
     })(ui = WOZLLA.ui || (WOZLLA.ui = {}));
 })(WOZLLA || (WOZLLA = {}));
@@ -14764,10 +14884,7 @@ var WOZLLA;
         var Button = (function (_super) {
             __extends(Button, _super);
             function Button() {
-                _super.call(this);
-                this._stateMachine.defineState(Button.STATE_NORMAL, true);
-                this._stateMachine.defineState(Button.STATE_DISABLED);
-                this._stateMachine.defineState(Button.STATE_PRESSED);
+                _super.apply(this, arguments);
             }
             Object.defineProperty(Button.prototype, "normalSpriteName", {
                 get: function () {
@@ -14804,7 +14921,6 @@ var WOZLLA;
                 this.gameObject.addListener('touch', function (e) { return _this.onTouch(e); });
                 this.gameObject.addListener('release', function (e) { return _this.onRelease(e); });
                 this.gameObject.addListener('tap', function (e) { return _this.onTap(e); });
-                this._stateMachine.init();
                 _super.prototype.init.call(this);
             };
             Button.prototype.destroy = function () {
@@ -14818,6 +14934,11 @@ var WOZLLA;
                 if (enabled === void 0) { enabled = true; }
                 this._stateMachine.changeState(enabled ? Button.STATE_NORMAL : Button.STATE_DISABLED);
                 this._gameObject.touchable = enabled;
+            };
+            Button.prototype.initStates = function () {
+                this._stateMachine.defineState(Button.STATE_NORMAL, true);
+                this._stateMachine.defineState(Button.STATE_DISABLED);
+                this._stateMachine.defineState(Button.STATE_PRESSED);
             };
             Button.prototype.onTouch = function (e) {
                 this._stateMachine.changeState(Button.STATE_PRESSED);
@@ -14847,10 +14968,7 @@ var WOZLLA;
         var CheckBox = (function (_super) {
             __extends(CheckBox, _super);
             function CheckBox() {
-                _super.call(this);
-                this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
-                this._stateMachine.defineState(CheckBox.STATE_DISABLED);
-                this._stateMachine.defineState(CheckBox.STATE_CHECKED);
+                _super.apply(this, arguments);
             }
             Object.defineProperty(CheckBox.prototype, "uncheckedSpriteName", {
                 get: function () {
@@ -14885,7 +15003,6 @@ var WOZLLA;
             CheckBox.prototype.init = function () {
                 var _this = this;
                 this._gameObject.addListener('tap', function (e) { return _this.onTap(e); });
-                this._stateMachine.init();
                 _super.prototype.init.call(this);
             };
             CheckBox.prototype.destroy = function () {
@@ -14899,6 +15016,11 @@ var WOZLLA;
                 if (enabled === void 0) { enabled = true; }
                 this._stateMachine.changeState(enabled ? CheckBox.STATE_UNCHECKED : CheckBox.STATE_DISABLED);
                 this._gameObject.touchable = enabled;
+            };
+            CheckBox.prototype.initStates = function () {
+                this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
+                this._stateMachine.defineState(CheckBox.STATE_DISABLED);
+                this._stateMachine.defineState(CheckBox.STATE_CHECKED);
             };
             CheckBox.prototype.onTap = function (e) {
                 if (this._stateMachine.getCurrentState() === CheckBox.STATE_CHECKED) {

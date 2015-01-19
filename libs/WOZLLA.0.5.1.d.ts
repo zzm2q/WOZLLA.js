@@ -1535,6 +1535,28 @@ declare module WOZLLA.assets {
         constructor(source: any, pixelFormat: renderer.PixelFormat);
     }
 }
+declare module WOZLLA.assets.proxy {
+    class AssetProxy {
+        protected proxyTarget: IProxyTarget;
+        protected asset: Asset;
+        protected newAssetSrc: string;
+        protected loading: boolean;
+        constructor(proxyTarget: IProxyTarget);
+        setAssetSrc(src: string): void;
+        loadAsset(callback: Function): void;
+        protected checkDirty(): boolean;
+        protected doLoad(callback: (asset: Asset) => void): void;
+    }
+    interface IProxyTarget {
+        onAssetLoaded(asset: Asset): any;
+    }
+}
+declare module WOZLLA.assets.proxy {
+    class SpriteAtlasProxy extends AssetProxy {
+        getSprite(spriteName: string): Sprite;
+        doLoad(callback: (asset: Asset) => void): void;
+    }
+}
 declare module WOZLLA.assets {
     /**
      * an sprite is a part of a sprite atlas
@@ -1946,7 +1968,7 @@ declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.SpriteRenderer
      */
-    class SpriteRenderer extends QuadRenderer {
+    class SpriteRenderer extends QuadRenderer implements assets.proxy.IProxyTarget {
         color: number;
         alpha: number;
         materialId: string;
@@ -1954,7 +1976,15 @@ declare module WOZLLA.component {
         renderOrder: number;
         sprite: assets.Sprite;
         spriteOffset: any;
+        spriteAtlasSrc: string;
+        spriteName: string;
+        _spriteProxy: assets.proxy.SpriteAtlasProxy;
         _sprite: assets.Sprite;
+        _spriteSrc: string;
+        _spriteName: string;
+        constructor();
+        onAssetLoaded(asset: assets.Asset): void;
+        loadAssets(callback: Function): void;
     }
 }
 declare module WOZLLA.component {
@@ -2257,13 +2287,11 @@ declare module WOZLLA.ui {
      * @class WOZLLA.ui.StateWidget
      * @protected
      */
-    class StateWidget extends Component {
-        spriteAtlas: assets.SpriteAtlas;
+    class StateWidget extends component.SpriteRenderer {
         _stateMachine: utils.StateMachine;
-        _spriteRenderer: component.SpriteRenderer;
-        _spriteAtlas: assets.SpriteAtlas;
-        listRequiredComponents(): Function[];
+        constructor();
         init(): void;
+        protected initStates(): void;
         protected getStateSpriteName(state: string): string;
         protected setStateSpriteName(state: string, spriteName: string): void;
         protected onStateChange(e: any): void;
@@ -2280,11 +2308,11 @@ declare module WOZLLA.ui {
         normalSpriteName: string;
         disabledSpriteName: string;
         pressedSpriteName: string;
-        constructor();
         init(): void;
         destroy(): void;
         isEnabled(): boolean;
         setEnabled(enabled?: boolean): void;
+        protected initStates(): void;
         protected onTouch(e: any): void;
         protected onRelease(e: any): void;
         protected onTap(e: any): void;
@@ -2301,11 +2329,11 @@ declare module WOZLLA.ui {
         uncheckedSpriteName: string;
         disabledSpriteName: string;
         checkedSpriteName: string;
-        constructor();
         init(): void;
         destroy(): void;
         isEnabled(): boolean;
         setEnabled(enabled?: boolean): void;
+        protected initStates(): void;
         protected onTap(e: any): void;
     }
 }
