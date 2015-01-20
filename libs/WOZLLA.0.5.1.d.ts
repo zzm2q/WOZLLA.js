@@ -1383,7 +1383,8 @@ declare module WOZLLA.renderer {
         _textureMap: any;
         constructor(gl: any);
         getTexture(id: any): any;
-        generateTexture(descriptor: ITextureDescriptor): ITexture;
+        generateTexture(descriptor: ITextureDescriptor, textureId?: any): ITexture;
+        updateTexture(texture: ITexture): void;
         deleteTexture(texture: ITexture): void;
         clear(): void;
     }
@@ -1598,7 +1599,7 @@ declare module WOZLLA.assets.proxy {
 declare module WOZLLA.assets.proxy {
     class SpriteAtlasProxy extends AssetProxy {
         getSprite(spriteName: string): Sprite;
-        doLoad(callback: (asset: Asset) => void): void;
+        protected doLoad(callback: (asset: Asset) => void): void;
     }
 }
 declare module WOZLLA.assets {
@@ -1976,6 +1977,26 @@ declare module WOZLLA.component {
     }
 }
 declare module WOZLLA.component {
+    class PropertyConverter {
+        static array2rect(arr: number[]): math.Rectangle;
+    }
+}
+declare module WOZLLA.component {
+    class CanvasRenderer extends QuadRenderer {
+        protected canvas: any;
+        protected context: any;
+        protected canvasSize: math.Size;
+        protected graphics: any;
+        protected dirty: boolean;
+        private _glTexture;
+        init(): void;
+        initCanvas(width: number, height: number): void;
+        draw(graphics: any): void;
+        clear(): void;
+        render(renderer: renderer.IRenderer, flags: number): void;
+    }
+}
+declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.SpriteRenderer
      */
@@ -2235,6 +2256,7 @@ declare module WOZLLA.renderer {
      */
     interface ITextureManager {
         generateTexture(descriptor: ITextureDescriptor): ITexture;
+        updateTexture(texture: ITexture): void;
         deleteTexture(texture: ITexture): void;
         getTexture(id: any): ITexture;
         clear(): void;

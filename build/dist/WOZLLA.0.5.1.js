@@ -3575,12 +3575,12 @@ var WOZLLA;
             TextureManager.prototype.getTexture = function (id) {
                 return this._textureMap[id];
             };
-            TextureManager.prototype.generateTexture = function (descriptor) {
+            TextureManager.prototype.generateTexture = function (descriptor, textureId) {
                 var texture;
                 var pvrtcExt;
                 var compressedType;
                 var gl = this._gl;
-                var id = gl.createTexture();
+                var id = textureId || gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, id);
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -3619,6 +3619,9 @@ var WOZLLA;
                 texture = new renderer.Texture(id, descriptor);
                 this._textureMap[id] = texture;
                 return texture;
+            };
+            TextureManager.prototype.updateTexture = function (texture) {
+                this.generateTexture(texture.descriptor, texture.id);
             };
             TextureManager.prototype.deleteTexture = function (texture) {
                 this._gl.deleteTexture(texture.id);
@@ -5632,6 +5635,79 @@ var WOZLLA;
         component.RectMask = RectMask;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
+/// <reference path="../math/Rectangle.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var PropertyConverter = (function () {
+            function PropertyConverter() {
+            }
+            PropertyConverter.array2rect = function (arr) {
+                return new WOZLLA.math.Rectangle(arr[0], arr[1], arr[2], arr[3]);
+            };
+            return PropertyConverter;
+        })();
+        component.PropertyConverter = PropertyConverter;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../../assets/GLTextureAsset.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var global = window;
+        var createjs = global.createjs;
+        var CanvasRenderer = (function (_super) {
+            __extends(CanvasRenderer, _super);
+            function CanvasRenderer() {
+                _super.apply(this, arguments);
+                this.dirty = true;
+            }
+            CanvasRenderer.prototype.init = function () {
+                if (this.canvasSize) {
+                    WOZLLA.Assert.isTrue(this.canvasSize.width > 0 && this.canvasSize.width <= 2048);
+                    WOZLLA.Assert.isTrue(this.canvasSize.height > 0 && this.canvasSize.height <= 2048);
+                    this.initCanvas(this.canvasSize.width, this.canvasSize.height);
+                    this.graphics = new createjs.Graphics();
+                    this.draw(this.graphics);
+                    this.graphics.draw(this.context);
+                }
+                _super.prototype.init.call(this);
+            };
+            CanvasRenderer.prototype.initCanvas = function (width, height) {
+                var canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                this.canvas = canvas;
+                this.context = canvas.getContext('2d');
+            };
+            CanvasRenderer.prototype.draw = function (graphics) {
+            };
+            CanvasRenderer.prototype.clear = function () {
+                this.context.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
+            };
+            CanvasRenderer.prototype.render = function (renderer, flags) {
+                if (this.canvas && !this._glTexture) {
+                    this._glTexture = renderer.textureManager.generateTexture(new WOZLLA.assets.HTMLImageDescriptor(this.canvas));
+                    this.setTexture(this._glTexture);
+                    this.dirty = false;
+                }
+                if (this._glTexture) {
+                    if (this.dirty) {
+                        this.draw(this.graphics);
+                        this.graphics.draw(this.context);
+                        this.dirty = false;
+                        renderer.textureManager.updateTexture(this._glTexture);
+                    }
+                    _super.prototype.render.call(this, renderer, flags);
+                }
+            };
+            return CanvasRenderer;
+        })(component.QuadRenderer);
+        component.CanvasRenderer = CanvasRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
 /// <reference path="QuadRenderer.ts"/>
 /// <reference path="../../assets/proxy/SpriteAtlasProxy.ts"/>
 /// <reference path="../../assets/Sprite.ts"/>
@@ -6069,7 +6145,20 @@ var WOZLLA;
         component.NinePatchRenderer = NinePatchRenderer;
         WOZLLA.Component.register(NinePatchRenderer, {
             name: "NinePatchRenderer",
-            properties: []
+            properties: [{
+                name: 'patch',
+                type: 'rect',
+                defaultValue: [0, 0, 0, 0],
+                convert: component.PropertyConverter.array2rect
+            }, {
+                name: 'renderRegion',
+                type: 'rect',
+                defaultValue: [0, 0, 0, 0],
+                convert: component.PropertyConverter.array2rect
+            }, {
+                group: 'SpriteRenderer',
+                properties: WOZLLA.Component.getConfig('SpriteRenderer').properties
+            }]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
@@ -6299,7 +6388,11 @@ var WOZLLA;
                 var config = WOZLLA.Component.getConfig(compData.name);
                 config.properties.forEach(function (prop) {
                     var value = compData.properties[prop.name];
-                    component[prop.name] = typeof value === 'undefined' ? prop.defaultValue : value;
+                    value = typeof value === 'undefined' ? prop.defaultValue : value;
+                    if (prop.convert) {
+                        value = prop.convert(value);
+                    }
+                    component[prop.name] = value;
                 });
                 return component;
             };
@@ -7114,7 +7207,6 @@ var WOZLLA;
                 _super.prototype.destroy.call(this);
             };
             SkeletonRenderer.prototype.render = function (renderer, flags) {
-                console.log('render', flags);
                 this._container.visit(renderer, this.transform, flags);
             };
             SkeletonRenderer.prototype.loadAssets = function (callback) {
