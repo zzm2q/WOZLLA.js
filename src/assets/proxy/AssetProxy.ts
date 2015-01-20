@@ -40,6 +40,11 @@ module WOZLLA.assets.proxy {
             }
         }
 
+        onDestroy() {
+            this.asset && this.asset.release();
+            this.asset = null;
+        }
+
         protected checkDirty():boolean {
             if(!this.asset) {
                 return !!this.newAssetSrc;
