@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CanvasRenderer | WOZLLA.js</title>
+    <title>TextRenderer | WOZLLA.js</title>
 </head>
 <body>
 <canvas id="canvas" width="500" height="500" style="border: 1px solid #999;"></canvas>
@@ -12,14 +12,13 @@
 
     var flag = 0;
     var gameObj = new WOZLLA.GameObject();
-    var canvasRenderer = new WOZLLA.component.CanvasRenderer();
-    canvasRenderer.canvasSize = new WOZLLA.math.Size(200, 200);
-    canvasRenderer.draw = function(ctx) {
-        ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-        ctx.fillStyle = flag % 2 ? 'blue' : 'red';
-        ctx.fillRect(20, 20, 50, 50);
-    };
-    gameObj.addComponent(canvasRenderer);
+    var textRenderer = new WOZLLA.component.TextRenderer();
+    textRenderer.text = 'TextRenderer';
+    textRenderer.style.color = '#FF0000';
+
+    gameObj.addComponent(textRenderer);
+
+    gameObj.transform.setPosition(100, 100);
 
     // this would automatically load all assets of gameObj, children and children's children.
     gameObj.loadAssets(function() {
@@ -27,10 +26,13 @@
         director.stage.addChild(gameObj);
     });
 
-    director.scheduler.scheduleInterval(function() {
-        flag ++;
-        canvasRenderer.dirty = true;
-    }, 500);
+    var num = 0;
+    director.scheduler.scheduleLoop(function() {
+        textRenderer.text = (++num) + '';
+        if(num === 100) {
+            textRenderer.style.align = 'center';
+        }
+    });
 </script>
 </body>
 </html>

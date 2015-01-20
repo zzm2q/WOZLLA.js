@@ -48,6 +48,7 @@ Version 0.5.1 (Released)
 
 ## Change Logs
 
+* add TextRenderer
 * add a base class: CanvasRenderer
 * Refactor DragonBones Support
 * Auto Assets Management

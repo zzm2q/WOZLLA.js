@@ -5652,55 +5652,112 @@ var WOZLLA;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="../../assets/GLTextureAsset.ts"/>
+/// <reference path="QuadRenderer.ts"/>
 var WOZLLA;
 (function (WOZLLA) {
     var component;
     (function (component) {
-        var global = window;
-        var createjs = global.createjs;
         var CanvasRenderer = (function (_super) {
             __extends(CanvasRenderer, _super);
             function CanvasRenderer() {
                 _super.apply(this, arguments);
-                this.dirty = true;
+                this._canvasSize = new WOZLLA.math.Size(0, 0);
+                this._graphicsDirty = true;
+                this._sizeDirty = true;
             }
-            CanvasRenderer.prototype.init = function () {
-                if (this.canvasSize) {
-                    WOZLLA.Assert.isTrue(this.canvasSize.width > 0 && this.canvasSize.width <= 2048);
-                    WOZLLA.Assert.isTrue(this.canvasSize.height > 0 && this.canvasSize.height <= 2048);
-                    this.initCanvas(this.canvasSize.width, this.canvasSize.height);
-                    this.graphics = new createjs.Graphics();
-                    this.draw(this.graphics);
-                    this.graphics.draw(this.context);
-                }
-                _super.prototype.init.call(this);
+            Object.defineProperty(CanvasRenderer.prototype, "canvasSize", {
+                get: function () {
+                    return this._canvasSize;
+                },
+                set: function (value) {
+                    this._canvasSize = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(CanvasRenderer.prototype, "canvasWidth", {
+                get: function () {
+                    return this._canvasSize.width;
+                },
+                set: function (value) {
+                    this._canvasSize.width = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(CanvasRenderer.prototype, "canvasHeight", {
+                get: function () {
+                    return this._canvasSize.height;
+                },
+                set: function (value) {
+                    this._canvasSize.height = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            CanvasRenderer.prototype.destroy = function () {
+                this.destroyCanvas();
+                _super.prototype.destroy.call(this);
             };
-            CanvasRenderer.prototype.initCanvas = function (width, height) {
-                var canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                this.canvas = canvas;
-                this.context = canvas.getContext('2d');
-            };
-            CanvasRenderer.prototype.draw = function (graphics) {
-            };
-            CanvasRenderer.prototype.clear = function () {
-                this.context.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
+            CanvasRenderer.prototype.draw = function (context) {
+                throw new Error('abstract method');
             };
             CanvasRenderer.prototype.render = function (renderer, flags) {
-                if (this.canvas && !this._glTexture) {
-                    this._glTexture = renderer.textureManager.generateTexture(new WOZLLA.assets.HTMLImageDescriptor(this.canvas));
-                    this.setTexture(this._glTexture);
-                    this.dirty = false;
+                if (!this._canvas) {
+                    this.initCanvas();
+                }
+                if (!this._canvas) {
+                    return;
+                }
+                if (this._sizeDirty) {
+                    this.updateCanvas();
+                }
+                if (this._graphicsDirty) {
+                    this.draw(this._context);
+                    this._graphicsDirty = false;
+                    this.generateCanvasTexture(renderer);
                 }
                 if (this._glTexture) {
-                    if (this.dirty) {
-                        this.draw(this.graphics);
-                        this.graphics.draw(this.context);
-                        this.dirty = false;
-                        renderer.textureManager.updateTexture(this._glTexture);
-                    }
                     _super.prototype.render.call(this, renderer, flags);
+                }
+            };
+            CanvasRenderer.prototype.initCanvas = function () {
+                if (this._canvasSize.width <= 0 || this._canvasSize.height <= 0) {
+                    return;
+                }
+                this._canvas = document.createElement('canvas');
+                this._canvas.width = this._canvasSize.width;
+                this._canvas.height = this._canvasSize.height;
+                this._context = this._canvas.getContext('2d');
+                this._sizeDirty = false;
+                this._graphicsDirty = true;
+            };
+            CanvasRenderer.prototype.updateCanvas = function () {
+                if (this._canvasSize.width <= 0 || this._canvasSize.height <= 0) {
+                    this.destroyCanvas();
+                    this._graphicsDirty = true;
+                }
+                this._canvas.width = this._canvasSize.width;
+                this._canvas.height = this._canvasSize.height;
+                this._sizeDirty = false;
+                this._graphicsDirty = true;
+            };
+            CanvasRenderer.prototype.destroyCanvas = function () {
+                this._canvas && this._canvas.dispose && this._canvas.dispose();
+                this._context && this._context.dispose && this._context.dispose();
+                this._canvas = this._context = null;
+            };
+            CanvasRenderer.prototype.generateCanvasTexture = function (renderer) {
+                if (!this._glTexture) {
+                    this._glTexture = renderer.textureManager.generateTexture(new WOZLLA.assets.HTMLImageDescriptor(this._canvas));
+                    this.setTexture(this._glTexture);
+                }
+                else {
+                    renderer.textureManager.updateTexture(this._glTexture);
+                    this.setTexture(this._glTexture);
                 }
             };
             return CanvasRenderer;
@@ -6160,6 +6217,315 @@ var WOZLLA;
                 properties: WOZLLA.Component.getConfig('SpriteRenderer').properties
             }]
         });
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../renderer/CanvasRenderer.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var helpCanvas = document.createElement('canvas');
+        helpCanvas.width = 1;
+        helpCanvas.height = 1;
+        var helpContext = helpCanvas.getContext('2d');
+        var TextRenderer = (function (_super) {
+            __extends(TextRenderer, _super);
+            function TextRenderer() {
+                _super.apply(this, arguments);
+                this._textDirty = true;
+                this._textStyle = new TextStyle();
+            }
+            TextRenderer.measureText = function (style, text) {
+                var measuredWidth, measuredHeight;
+                var extendSize;
+                helpContext.font = style.font;
+                measuredWidth = Math.ceil(helpContext.measureText(text).width);
+                measuredHeight = Math.ceil(helpContext.measureText("M").width * 1.2);
+                if (style.shadow || style.stroke) {
+                    extendSize = Math.max(style.strokeWidth, Math.abs(style.shadowOffsetX), Math.abs(style.shadowOffsetY));
+                    measuredWidth += extendSize * 2;
+                    measuredHeight += extendSize * 2 + 4;
+                }
+                measuredWidth = Math.ceil(measuredWidth);
+                measuredHeight = Math.ceil(measuredHeight);
+                if (measuredWidth % 2 !== 0) {
+                    measuredWidth += 1;
+                }
+                if (measuredHeight % 2 !== 0) {
+                    measuredHeight += 1;
+                }
+                return {
+                    width: measuredWidth,
+                    height: measuredHeight
+                };
+            };
+            Object.defineProperty(TextRenderer.prototype, "text", {
+                get: function () {
+                    return this._text;
+                },
+                set: function (value) {
+                    if (typeof value !== 'string') {
+                        value = value + '';
+                    }
+                    if (value === this._text)
+                        return;
+                    this._text = value;
+                    this._textDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, "style", {
+                get: function () {
+                    return this._textStyle;
+                },
+                set: function (value) {
+                    this._textStyle = value;
+                    this._textDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, "textWidth", {
+                get: function () {
+                    return this._canvasSize.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, "textHeight", {
+                get: function () {
+                    return this._canvasSize.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            TextRenderer.prototype.render = function (renderer, flags) {
+                if (this._textDirty || this._textStyle.dirty) {
+                    this.measureTextSize();
+                    this._textStyle.dirty = false;
+                    this._textDirty = false;
+                    this._graphicsDirty = true;
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            TextRenderer.prototype.draw = function (context) {
+                this.drawText(context, this._canvasSize.width, this._canvasSize.height);
+            };
+            TextRenderer.prototype.drawText = function (context, measuredWidth, measuredHeight) {
+                context.save();
+                context.font = this._textStyle.font;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                if (this._textStyle.shadow && (this._textStyle.shadowOffsetX > 0 || this._textStyle.shadowOffsetY > 0)) {
+                    context.fillStyle = this._textStyle.shadowColor;
+                    context.fillText(this._text, measuredWidth / 2 + this._textStyle.shadowOffsetX, measuredHeight / 2 + this._textStyle.shadowOffsetY);
+                }
+                if (this._textStyle.stroke && this._textStyle.strokeWidth > 0) {
+                    context.strokeStyle = this._textStyle.strokeColor;
+                    context.lineWidth = this._textStyle.strokeWidth;
+                    context.strokeText(this._text, measuredWidth / 2, measuredHeight / 2);
+                }
+                context.fillStyle = this._textStyle.color;
+                context.fillText(this._text, measuredWidth / 2, measuredHeight / 2);
+                context.restore();
+            };
+            TextRenderer.prototype.measureTextSize = function () {
+                var measureSize;
+                if (!this._text) {
+                    this.canvasWidth = this.canvasHeight = 0;
+                }
+                else {
+                    measureSize = TextRenderer.measureText(this._textStyle, this._text);
+                    this.canvasWidth = measureSize.width;
+                    this.canvasHeight = measureSize.height;
+                }
+            };
+            TextRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = { x: 0, y: 0 };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                if (this._textStyle.align === TextStyle.CENTER) {
+                    offset.x = 0.5;
+                }
+                else if (this._textStyle.align === TextStyle.END) {
+                    offset.x = 1;
+                }
+                if (this._textStyle.baseline === TextStyle.MIDDLE) {
+                    offset.y = 0.5;
+                }
+                else if (this._textStyle.baseline === TextStyle.BOTTOM) {
+                    offset.y = 1;
+                }
+                this.setTextureOffset(offset);
+            };
+            return TextRenderer;
+        })(component.CanvasRenderer);
+        component.TextRenderer = TextRenderer;
+        var TextStyle = (function () {
+            function TextStyle() {
+                this.dirty = true;
+                this._font = 'normal 24px Arial';
+                this._color = '#000000';
+                this._shadow = false;
+                this._shadowColor = '#000000';
+                this._shadowOffsetX = 0;
+                this._shadowOffsetY = 0;
+                this._stroke = false;
+                this._strokeColor = '#000000';
+                this._strokeWidth = 0;
+                this._align = TextStyle.START;
+                this._baseline = TextStyle.TOP;
+            }
+            Object.defineProperty(TextStyle.prototype, "font", {
+                get: function () {
+                    return this._font;
+                },
+                set: function (value) {
+                    if (value === this._font)
+                        return;
+                    this._font = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "color", {
+                get: function () {
+                    return this._color;
+                },
+                set: function (value) {
+                    if (value === this._color)
+                        return;
+                    this._color = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "shadow", {
+                get: function () {
+                    return this._shadow;
+                },
+                set: function (value) {
+                    if (value === this._shadow)
+                        return;
+                    this._shadow = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "shadowColor", {
+                get: function () {
+                    return this._shadowColor;
+                },
+                set: function (value) {
+                    this._shadowColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "shadowOffsetX", {
+                get: function () {
+                    return this._shadowOffsetX;
+                },
+                set: function (value) {
+                    if (value === this._shadowOffsetX)
+                        return;
+                    this._shadowOffsetX = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "shadowOffsetY", {
+                get: function () {
+                    return this._shadowOffsetY;
+                },
+                set: function (value) {
+                    if (value === this._shadowOffsetY)
+                        return;
+                    this._shadowOffsetY = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "stroke", {
+                get: function () {
+                    return this._stroke;
+                },
+                set: function (value) {
+                    if (value === this._stroke)
+                        return;
+                    this._stroke = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "strokeColor", {
+                get: function () {
+                    return this._strokeColor;
+                },
+                set: function (value) {
+                    if (value === this._strokeColor)
+                        return;
+                    this._strokeColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "strokeWidth", {
+                get: function () {
+                    return this._strokeWidth;
+                },
+                set: function (value) {
+                    if (value === this._strokeWidth)
+                        return;
+                    this._strokeWidth = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "align", {
+                get: function () {
+                    return this._align;
+                },
+                set: function (value) {
+                    if (value === this._align)
+                        return;
+                    this._align = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, "baseline", {
+                get: function () {
+                    return this._baseline;
+                },
+                set: function (value) {
+                    if (value === this._baseline)
+                        return;
+                    this._baseline = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            TextStyle.START = 'start';
+            TextStyle.CENTER = 'center';
+            TextStyle.END = 'end';
+            TextStyle.TOP = 'top';
+            TextStyle.MIDDLE = 'middle';
+            TextStyle.BOTTOM = 'bottom';
+            return TextStyle;
+        })();
+        component.TextStyle = TextStyle;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="Component.ts"/>

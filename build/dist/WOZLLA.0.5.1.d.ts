@@ -1983,17 +1983,22 @@ declare module WOZLLA.component {
 }
 declare module WOZLLA.component {
     class CanvasRenderer extends QuadRenderer {
-        protected canvas: any;
-        protected context: any;
-        protected canvasSize: math.Size;
-        protected graphics: any;
-        protected dirty: boolean;
-        private _glTexture;
-        init(): void;
-        initCanvas(width: number, height: number): void;
-        draw(graphics: any): void;
-        clear(): void;
+        canvasSize: math.Size;
+        canvasWidth: number;
+        canvasHeight: number;
+        _canvas: any;
+        _context: any;
+        _canvasSize: math.Size;
+        _glTexture: any;
+        _graphicsDirty: boolean;
+        _sizeDirty: boolean;
+        destroy(): void;
+        draw(context: any): void;
         render(renderer: renderer.IRenderer, flags: number): void;
+        protected initCanvas(): void;
+        protected updateCanvas(): void;
+        protected destroyCanvas(): void;
+        protected generateCanvasTexture(renderer: renderer.IRenderer): void;
     }
 }
 declare module WOZLLA.component {
@@ -2036,6 +2041,57 @@ declare module WOZLLA.component {
         _updateNinePatchQuadAlpha(): void;
         _updateNinePatchQuadColor(): void;
         render(renderer: renderer.IRenderer, flags: number): void;
+    }
+}
+declare module WOZLLA.component {
+    class TextRenderer extends CanvasRenderer {
+        static measureText(style: TextStyle, text: string): {
+            width: any;
+            height: any;
+        };
+        text: string;
+        style: TextStyle;
+        textWidth: number;
+        textHeight: number;
+        _textDirty: boolean;
+        _text: string;
+        _textStyle: TextStyle;
+        render(renderer: renderer.IRenderer, flags: number): void;
+        draw(context: any): void;
+        protected drawText(context: any, measuredWidth: any, measuredHeight: any): void;
+        protected measureTextSize(): void;
+        protected generateCanvasTexture(renderer: renderer.IRenderer): void;
+    }
+    class TextStyle {
+        static START: string;
+        static CENTER: string;
+        static END: string;
+        static TOP: string;
+        static MIDDLE: string;
+        static BOTTOM: string;
+        dirty: boolean;
+        font: string;
+        color: string;
+        shadow: boolean;
+        shadowColor: string;
+        shadowOffsetX: number;
+        shadowOffsetY: number;
+        stroke: boolean;
+        strokeColor: string;
+        strokeWidth: number;
+        align: string;
+        baseline: string;
+        _font: string;
+        _color: string;
+        _shadow: boolean;
+        _shadowColor: string;
+        _shadowOffsetX: number;
+        _shadowOffsetY: number;
+        _stroke: boolean;
+        _strokeColor: string;
+        _strokeWidth: number;
+        _align: string;
+        _baseline: string;
     }
 }
 declare module WOZLLA {
