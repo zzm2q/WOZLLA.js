@@ -48,6 +48,7 @@ Version 0.5.1 (Released)
 
 ## Change Logs
 
+* add AnimationRenderer
 * add simple primitives: RectRenderer, CircleRenderer
 * add TextRenderer
 * add a base class: CanvasRenderer
