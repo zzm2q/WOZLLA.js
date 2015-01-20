@@ -60,6 +60,8 @@ module WOZLLA.assets {
         _spriteData:any;
         _spriteCache:any = {};
 
+        _frameLengthCache:number;
+
         /**
          * new a SpriteAtlas
          * @method constructor
@@ -69,14 +71,32 @@ module WOZLLA.assets {
             super(src);
         }
 
+        getFrameLength():number {
+            var frames;
+            if(!this._spriteData) {
+                return 1;
+            }
+            frames = this._spriteData.frames;
+            if(Object.prototype.toString.call(frames) === '[object Array]') {
+                return frames.length;
+            }
+            if(this._frameLengthCache == void 0) {
+                this._frameLengthCache = 0;
+                for(var _ in frames) {
+                    this._frameLengthCache ++;
+                }
+            }
+            return this._frameLengthCache;
+        }
+
         /**
          * get sprite by name
          * @param name
          * @returns {WOZLLA.assets.Sprite}
          */
-        getSprite(name?:string):Sprite {
+        getSprite(name?:any):Sprite {
             var frameData, sprite;
-            if(!name) {
+            if(name == void 0) {
                 return this._entireSprite;
             }
             sprite = this._spriteCache[name];
@@ -96,7 +116,9 @@ module WOZLLA.assets {
                     x: frameData.frame.x,
                     y: frameData.frame.y,
                     width: frameData.frame.width,
-                    height: frameData.frame.height
+                    height: frameData.frame.height,
+                    offsetX: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.x || 0) : 0),
+                    offsetY: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.y || 0) : 0)
                 }, name);
                 this._spriteCache[name] = sprite;
                 return sprite;

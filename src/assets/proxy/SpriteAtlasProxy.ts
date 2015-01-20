@@ -2,11 +2,19 @@ module WOZLLA.assets.proxy {
 
     export class SpriteAtlasProxy extends AssetProxy {
 
-        getSprite(spriteName:string):Sprite {
+        getSprite(spriteName:any):Sprite {
             if(this.asset) {
                 return (<SpriteAtlas>this.asset).getSprite(spriteName);
             }
             return null;
+        }
+
+        getFrameLength():number {
+            var frames;
+            if(!this.asset) {
+                return 0;
+            }
+            return (<SpriteAtlas>this.asset).getFrameLength();
         }
 
         protected doLoad(callback:(asset:Asset) => void) {
