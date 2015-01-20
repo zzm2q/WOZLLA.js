@@ -1977,11 +1977,6 @@ declare module WOZLLA.component {
     }
 }
 declare module WOZLLA.component {
-    class PropertyConverter {
-        static array2rect(arr: number[]): math.Rectangle;
-    }
-}
-declare module WOZLLA.component {
     class CanvasRenderer extends QuadRenderer {
         canvasSize: math.Size;
         canvasWidth: number;
@@ -1995,10 +1990,58 @@ declare module WOZLLA.component {
         destroy(): void;
         draw(context: any): void;
         render(renderer: renderer.IRenderer, flags: number): void;
+        clearCanvas(): void;
         protected initCanvas(): void;
         protected updateCanvas(): void;
         protected destroyCanvas(): void;
         protected generateCanvasTexture(renderer: renderer.IRenderer): void;
+    }
+}
+declare module WOZLLA.component {
+    class PrimitiveRenderer extends CanvasRenderer {
+        primitiveStyle: PrimitiveStyle;
+        _primitiveStyle: PrimitiveStyle;
+        render(renderer: renderer.IRenderer, flags: number): void;
+        draw(context: any): void;
+        protected applyPrimitiveStyle(context: any): void;
+        protected drawPrimitive(context: any): void;
+        protected measurePrimitiveSize(): any;
+    }
+    class PrimitiveStyle {
+        dirty: boolean;
+        stroke: boolean;
+        strokeColor: string;
+        strokeWidth: number;
+        fill: boolean;
+        fillColor: string;
+        _stroke: boolean;
+        _fill: boolean;
+        _strokeColor: string;
+        _strokeWidth: number;
+        _fillColor: string;
+    }
+}
+declare module WOZLLA.component {
+    class CircleRenderer extends PrimitiveRenderer {
+        circle: math.Circle;
+        _circle: math.Circle;
+        drawPrimitive(context: any): void;
+        protected measurePrimitiveSize(): any;
+        protected generateCanvasTexture(renderer: renderer.IRenderer): void;
+    }
+}
+declare module WOZLLA.component {
+    class RectRenderer extends PrimitiveRenderer {
+        rect: math.Rectangle;
+        _rect: math.Rectangle;
+        drawPrimitive(context: any): void;
+        protected measurePrimitiveSize(): any;
+        protected generateCanvasTexture(renderer: renderer.IRenderer): void;
+    }
+}
+declare module WOZLLA.component {
+    class PropertyConverter {
+        static array2rect(arr: number[]): math.Rectangle;
     }
 }
 declare module WOZLLA.component {
@@ -2050,7 +2093,7 @@ declare module WOZLLA.component {
             height: any;
         };
         text: string;
-        style: TextStyle;
+        textStyle: TextStyle;
         textWidth: number;
         textHeight: number;
         _textDirty: boolean;
@@ -2059,7 +2102,7 @@ declare module WOZLLA.component {
         render(renderer: renderer.IRenderer, flags: number): void;
         draw(context: any): void;
         protected drawText(context: any, measuredWidth: any, measuredHeight: any): void;
-        protected measureTextSize(): void;
+        protected measureTextSize(): any;
         protected generateCanvasTexture(renderer: renderer.IRenderer): void;
     }
     class TextStyle {

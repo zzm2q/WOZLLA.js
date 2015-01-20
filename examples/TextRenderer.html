@@ -14,7 +14,7 @@
     var gameObj = new WOZLLA.GameObject();
     var textRenderer = new WOZLLA.component.TextRenderer();
     textRenderer.text = 'TextRenderer';
-    textRenderer.style.color = '#FF0000';
+    textRenderer.textStyle.color = '#FF0000';
 
     gameObj.addComponent(textRenderer);
 
@@ -28,9 +28,9 @@
 
     var num = 0;
     director.scheduler.scheduleLoop(function() {
-        textRenderer.text = (++num) + '';
+        textRenderer.text = 'TextRenderer_' + (++num) + '';
         if(num === 100) {
-            textRenderer.style.align = 'center';
+            textRenderer.textStyle.align = 'center';
         }
     });
 </script>

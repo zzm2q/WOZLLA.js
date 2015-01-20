@@ -5635,22 +5635,6 @@ var WOZLLA;
         component.RectMask = RectMask;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
-/// <reference path="../math/Rectangle.ts"/>
-var WOZLLA;
-(function (WOZLLA) {
-    var component;
-    (function (component) {
-        var PropertyConverter = (function () {
-            function PropertyConverter() {
-            }
-            PropertyConverter.array2rect = function (arr) {
-                return new WOZLLA.math.Rectangle(arr[0], arr[1], arr[2], arr[3]);
-            };
-            return PropertyConverter;
-        })();
-        component.PropertyConverter = PropertyConverter;
-    })(component = WOZLLA.component || (WOZLLA.component = {}));
-})(WOZLLA || (WOZLLA = {}));
 /// <reference path="../../assets/GLTextureAsset.ts"/>
 /// <reference path="QuadRenderer.ts"/>
 var WOZLLA;
@@ -5716,6 +5700,7 @@ var WOZLLA;
                     this.updateCanvas();
                 }
                 if (this._graphicsDirty) {
+                    this.clearCanvas();
                     this.draw(this._context);
                     this._graphicsDirty = false;
                     this.generateCanvasTexture(renderer);
@@ -5723,6 +5708,9 @@ var WOZLLA;
                 if (this._glTexture) {
                     _super.prototype.render.call(this, renderer, flags);
                 }
+            };
+            CanvasRenderer.prototype.clearCanvas = function () {
+                this._context.clearRect(0, 0, this._canvasSize.width, this._canvasSize.height);
             };
             CanvasRenderer.prototype.initCanvas = function () {
                 if (this._canvasSize.width <= 0 || this._canvasSize.height <= 0) {
@@ -5763,6 +5751,278 @@ var WOZLLA;
             return CanvasRenderer;
         })(component.QuadRenderer);
         component.CanvasRenderer = CanvasRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../renderer/CanvasRenderer.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var PrimitiveRenderer = (function (_super) {
+            __extends(PrimitiveRenderer, _super);
+            function PrimitiveRenderer() {
+                _super.apply(this, arguments);
+                this._primitiveStyle = new PrimitiveStyle();
+            }
+            Object.defineProperty(PrimitiveRenderer.prototype, "primitiveStyle", {
+                get: function () {
+                    return this._primitiveStyle;
+                },
+                set: function (value) {
+                    this._primitiveStyle = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            PrimitiveRenderer.prototype.render = function (renderer, flags) {
+                var size;
+                if (this._graphicsDirty || this._primitiveStyle.dirty) {
+                    size = this.measurePrimitiveSize();
+                    this.canvasWidth = size.width;
+                    this.canvasHeight = size.height;
+                    this._graphicsDirty = true;
+                    this._primitiveStyle.dirty = false;
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            PrimitiveRenderer.prototype.draw = function (context) {
+                context.save();
+                this.applyPrimitiveStyle(context);
+                this.drawPrimitive(context);
+                context.restore();
+            };
+            PrimitiveRenderer.prototype.applyPrimitiveStyle = function (context) {
+                if (this._primitiveStyle.stroke) {
+                    context.lineWidth = this._primitiveStyle.strokeWidth;
+                    context.strokeStyle = this._primitiveStyle.strokeColor;
+                }
+                if (this._primitiveStyle.fill) {
+                    context.fillStyle = this._primitiveStyle.fillColor;
+                }
+            };
+            PrimitiveRenderer.prototype.drawPrimitive = function (context) {
+                throw new Error('abstract method');
+            };
+            PrimitiveRenderer.prototype.measurePrimitiveSize = function () {
+                throw new Error('abstract method');
+            };
+            return PrimitiveRenderer;
+        })(component.CanvasRenderer);
+        component.PrimitiveRenderer = PrimitiveRenderer;
+        var PrimitiveStyle = (function () {
+            function PrimitiveStyle() {
+                this.dirty = true;
+                this._stroke = true;
+                this._fill = false;
+                this._strokeColor = '#000000';
+                this._strokeWidth = 1;
+                this._fillColor = '#FFFFFF';
+            }
+            Object.defineProperty(PrimitiveStyle.prototype, "stroke", {
+                get: function () {
+                    return this._stroke;
+                },
+                set: function (value) {
+                    if (value === this._stroke)
+                        return;
+                    this._stroke = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, "strokeColor", {
+                get: function () {
+                    return this._strokeColor;
+                },
+                set: function (value) {
+                    if (value === this._strokeColor)
+                        return;
+                    this._strokeColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, "strokeWidth", {
+                get: function () {
+                    return this._strokeWidth;
+                },
+                set: function (value) {
+                    if (value === this._strokeWidth)
+                        return;
+                    this._strokeWidth = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, "fill", {
+                get: function () {
+                    return this._fill;
+                },
+                set: function (value) {
+                    if (value === this._fill)
+                        return;
+                    this._fill = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, "fillColor", {
+                get: function () {
+                    return this._fillColor;
+                },
+                set: function (value) {
+                    if (value === this._fillColor)
+                        return;
+                    this._fillColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            return PrimitiveStyle;
+        })();
+        component.PrimitiveStyle = PrimitiveStyle;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="PrimitiveRenderer.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var CircleRenderer = (function (_super) {
+            __extends(CircleRenderer, _super);
+            function CircleRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(CircleRenderer.prototype, "circle", {
+                get: function () {
+                    return this._circle;
+                },
+                set: function (value) {
+                    this._circle = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            CircleRenderer.prototype.drawPrimitive = function (context) {
+                var style = this._primitiveStyle;
+                var centerX = this._canvasSize.width / 2;
+                var centerY = this._canvasSize.height / 2;
+                context.beginPath();
+                context.arc(centerX, centerY, this._circle.radius, 0, 2 * Math.PI);
+                if (style.stroke) {
+                    context.stroke();
+                }
+                if (style.fill) {
+                    context.fill();
+                }
+            };
+            CircleRenderer.prototype.measurePrimitiveSize = function () {
+                var style = this._primitiveStyle;
+                if (!this._circle) {
+                    return {
+                        width: 0,
+                        height: 0
+                    };
+                }
+                return {
+                    width: Math.ceil(this._circle.radius * 2 + (style.stroke ? style.strokeWidth : 0)),
+                    height: Math.ceil(this._circle.radius * 2 + (style.stroke ? style.strokeWidth : 0))
+                };
+            };
+            CircleRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = {
+                    x: this._circle.centerX / this._circle.radius + 0.5,
+                    y: this._circle.centerY / this._circle.radius + 0.5
+                };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                this.setTextureOffset(offset);
+            };
+            return CircleRenderer;
+        })(component.PrimitiveRenderer);
+        component.CircleRenderer = CircleRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="PrimitiveRenderer.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var RectRenderer = (function (_super) {
+            __extends(RectRenderer, _super);
+            function RectRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(RectRenderer.prototype, "rect", {
+                get: function () {
+                    return this._rect;
+                },
+                set: function (value) {
+                    this._rect = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            RectRenderer.prototype.drawPrimitive = function (context) {
+                var style = this._primitiveStyle;
+                if (style.stroke) {
+                    context.rect(style.strokeWidth / 2, style.strokeWidth / 2, this._rect.width, this._rect.height);
+                    context.stroke();
+                }
+                else {
+                    context.rect(0, 0, this._rect.width, this._rect.height);
+                }
+                if (style.fill) {
+                    context.fill();
+                }
+            };
+            RectRenderer.prototype.measurePrimitiveSize = function () {
+                var style = this._primitiveStyle;
+                if (!this._rect) {
+                    return {
+                        width: 0,
+                        height: 0
+                    };
+                }
+                return {
+                    width: Math.ceil(this._rect.width + (style.stroke ? style.strokeWidth : 0)),
+                    height: Math.ceil(this._rect.height + (style.stroke ? style.strokeWidth : 0))
+                };
+            };
+            RectRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = {
+                    x: -this._rect.x / this._rect.width,
+                    y: -this._rect.y / this._rect.height
+                };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                this.setTextureOffset(offset);
+            };
+            return RectRenderer;
+        })(component.PrimitiveRenderer);
+        component.RectRenderer = RectRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="../math/Rectangle.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var PropertyConverter = (function () {
+            function PropertyConverter() {
+            }
+            PropertyConverter.array2rect = function (arr) {
+                return new WOZLLA.math.Rectangle(arr[0], arr[1], arr[2], arr[3]);
+            };
+            return PropertyConverter;
+        })();
+        component.PropertyConverter = PropertyConverter;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="QuadRenderer.ts"/>
@@ -6275,7 +6535,7 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(TextRenderer.prototype, "style", {
+            Object.defineProperty(TextRenderer.prototype, "textStyle", {
                 get: function () {
                     return this._textStyle;
                 },
@@ -6301,8 +6561,11 @@ var WOZLLA;
                 configurable: true
             });
             TextRenderer.prototype.render = function (renderer, flags) {
+                var size;
                 if (this._textDirty || this._textStyle.dirty) {
-                    this.measureTextSize();
+                    size = this.measureTextSize();
+                    this.canvasWidth = size.width;
+                    this.canvasHeight = size.height;
                     this._textStyle.dirty = false;
                     this._textDirty = false;
                     this._graphicsDirty = true;
@@ -6333,13 +6596,15 @@ var WOZLLA;
             TextRenderer.prototype.measureTextSize = function () {
                 var measureSize;
                 if (!this._text) {
-                    this.canvasWidth = this.canvasHeight = 0;
+                    measureSize = {
+                        width: 0,
+                        height: 0
+                    };
                 }
                 else {
                     measureSize = TextRenderer.measureText(this._textStyle, this._text);
-                    this.canvasWidth = measureSize.width;
-                    this.canvasHeight = measureSize.height;
                 }
+                return measureSize;
             };
             TextRenderer.prototype.generateCanvasTexture = function (renderer) {
                 var offset = { x: 0, y: 0 };
