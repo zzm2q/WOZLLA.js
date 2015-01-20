@@ -170,7 +170,11 @@ module WOZLLA.jsonx {
             var config = WOZLLA.Component.getConfig(compData.name);
             config.properties.forEach((prop) => {
                 var value = compData.properties[prop.name];
-                component[prop.name] =  typeof value === 'undefined' ? prop.defaultValue : value;
+                value = typeof value === 'undefined' ? prop.defaultValue : value;
+                if(prop.convert) {
+                    value = prop.convert(value);
+                }
+                component[prop.name] = value;
             });
             return component;
         }

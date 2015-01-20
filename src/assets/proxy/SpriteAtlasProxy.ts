@@ -9,7 +9,7 @@ module WOZLLA.assets.proxy {
             return null;
         }
 
-        doLoad(callback:(asset:Asset) => void) {
+        protected doLoad(callback:(asset:Asset) => void) {
             var src = this.newAssetSrc;
             if(!src) {
                 callback(null);

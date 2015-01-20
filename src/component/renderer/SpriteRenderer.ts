@@ -71,7 +71,7 @@ module WOZLLA.component {
             this._spriteProxy = new WOZLLA.assets.proxy.SpriteAtlasProxy(this);
         }
 
-        destroy() {
+        destroy():void {
             this._spriteProxy.onDestroy();
             super.destroy();
         }
