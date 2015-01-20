@@ -77,6 +77,13 @@ Version 2.0
 
 Please report [issues](https://github.com/zzm2q/WOZLLA.js/issues) with as much info as possible.
 
+## Thanks
+
+The parts of technologies WOZLLA.js using was learn from the following libraries:
+
+* [pixi.js](https://github.com/GoodBoyDigital/pixi.js)
+* [createjs](https://github.com/CreateJS)
+
 ## MIT License
 
 The MIT License (MIT)
