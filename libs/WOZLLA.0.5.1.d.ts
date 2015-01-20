@@ -1090,7 +1090,7 @@ declare module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleLoop(task: any, args: any): string;
+        scheduleLoop(task: any, args?: any): string;
         /**
          * schedule the task to the next speficied frame
          * @param task
@@ -1098,7 +1098,7 @@ declare module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleFrame(task: any, frame: any, args: any): string;
+        scheduleFrame(task: any, frame?: number, args?: any): string;
         /**
          * schedule the task to internal, like setInterval
          * @param task
@@ -1106,7 +1106,7 @@ declare module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleInterval(task: any, time: any, args: any): string;
+        scheduleInterval(task: any, time?: number, args?: any): string;
         /**
          * schedule the task to time, like setTimeout
          * @param task
@@ -1114,7 +1114,7 @@ declare module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleTime(task: any, time: any, args: any): string;
+        scheduleTime(task: any, time?: number, args?: any): string;
         /**
          * resume the specified schedule
          * @param scheduleId
@@ -1472,7 +1472,7 @@ declare module WOZLLA {
         assetLoader: assets.AssetLoader;
         /**
          * get the root instance of RectTransform
-         * @returns {WOZLLA.RectTransform}
+         * @returns {WOZLLA.RectTransform} viewRectTransform
          */
         viewRectTransform: RectTransform;
         private _runing;
@@ -1537,6 +1537,47 @@ declare module WOZLLA.assets {
         constructor(source: any, pixelFormat: renderer.PixelFormat);
     }
 }
+declare module WOZLLA.utils {
+    /**
+     * @class WOZLLA.utils.Ajax
+     */
+    class Ajax {
+        /**
+         * internal ajax error code when timeout
+         * @property ERROR_TIMEOUT
+         * @static
+         * @readonly
+         */
+        static ERROR_TIMEOUT: number;
+        /**
+         * internal ajax error code when server error
+         * @property ERROR_SERVER
+         * @static
+         * @readonly
+         */
+        static ERROR_SERVER: number;
+        /**
+         * send a request with options
+         * @param {object} options
+         * @param {boolean} options.async
+         * @param {string} options.method GET/POST
+         * @param {string} options.contentType text/json/xml
+         * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
+         * @param {number} [options.timeout=30000]
+         * @param {function} options.success call when ajax request successfully
+         * @param {function} options.error call when ajax request error
+         */
+        static request(options?: any): void;
+    }
+}
+declare module WOZLLA.assets {
+    class JSONAsset extends Asset {
+        _data: any;
+        cloneData(): any;
+        load(onSuccess: () => any, onError: (error: any) => any): void;
+        unload(): void;
+    }
+}
 declare module WOZLLA.assets.proxy {
     class AssetProxy {
         protected proxyTarget: IProxyTarget;
@@ -1546,6 +1587,7 @@ declare module WOZLLA.assets.proxy {
         constructor(proxyTarget: IProxyTarget);
         setAssetSrc(src: string): void;
         loadAsset(callback: Function): void;
+        onDestroy(): void;
         protected checkDirty(): boolean;
         protected doLoad(callback: (asset: Asset) => void): void;
     }
@@ -1597,39 +1639,6 @@ declare module WOZLLA.assets {
          * @param name
          */
         constructor(spriteAtlas: SpriteAtlas, frame: any, name?: any);
-    }
-}
-declare module WOZLLA.utils {
-    /**
-     * @class WOZLLA.utils.Ajax
-     */
-    class Ajax {
-        /**
-         * internal ajax error code when timeout
-         * @property ERROR_TIMEOUT
-         * @static
-         * @readonly
-         */
-        static ERROR_TIMEOUT: number;
-        /**
-         * internal ajax error code when server error
-         * @property ERROR_SERVER
-         * @static
-         * @readonly
-         */
-        static ERROR_SERVER: number;
-        /**
-         * send a request with options
-         * @param {object} options
-         * @param {boolean} options.async
-         * @param {string} options.method GET/POST
-         * @param {string} options.contentType text/json/xml
-         * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
-         * @param {number} [options.timeout=30000]
-         * @param {function} options.success call when ajax request successfully
-         * @param {function} options.error call when ajax request error
-         */
-        static request(options?: any): void;
     }
 }
 declare module WOZLLA.assets {
@@ -1986,6 +1995,7 @@ declare module WOZLLA.component {
         _spriteAtlasSrc: string;
         _spriteName: string;
         constructor();
+        destroy(): void;
         onAssetLoaded(asset: assets.Asset): void;
         loadAssets(callback: Function): void;
     }
@@ -2420,6 +2430,27 @@ declare module WOZLLA.utils {
     }
 }
 declare module WOZLLA.DragonBones {
+    class SkeletonRenderer extends Renderer {
+        skeletonSrc: string;
+        textureSrc: string;
+        armatureName: string;
+        armature: dragonBones.Armature;
+        _skeletonSrc: any;
+        _textureSrc: any;
+        _factory: any;
+        _skeletonJSONAsset: any;
+        _wTextureAtlas: any;
+        _armatureName: string;
+        _armature: dragonBones.Armature;
+        _container: GameObject;
+        init(): void;
+        destroy(): void;
+        render(renderer: renderer.IRenderer, flags: number): void;
+        loadAssets(callback: Function): void;
+        protected initArmature(): void;
+    }
+}
+declare module WOZLLA.DragonBones {
     class WSlot extends dragonBones.Slot {
         private _display;
         constructor();
@@ -2452,6 +2483,7 @@ declare module WOZLLA.DragonBones {
     }
 }
 declare module WOZLLA.DragonBones {
+    function setupWorldClock(): void;
     class WFactory extends dragonBones.BaseFactory {
         constructor();
         /** @private */

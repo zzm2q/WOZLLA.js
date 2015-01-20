@@ -11137,8 +11137,8 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleFrame = function (task, frame, args) {
+            if (frame === void 0) { frame = 0; }
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
-            frame = frame || 0;
             this._schedules[scheduleId] = {
                 task: task,
                 frame: frame,
@@ -11155,6 +11155,7 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleInterval = function (task, time, args) {
+            if (time === void 0) { time = 0; }
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task: task,
@@ -11173,6 +11174,7 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleTime = function (task, time, args) {
+            if (time === void 0) { time = 0; }
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             time = time || 0;
             this._schedules[scheduleId] = {
@@ -12372,7 +12374,7 @@ var WOZLLA;
         Object.defineProperty(Director.prototype, "viewRectTransform", {
             /**
              * get the root instance of RectTransform
-             * @returns {WOZLLA.RectTransform}
+             * @returns {WOZLLA.RectTransform} viewRectTransform
              */
             get: function () {
                 return this._stage.viewRectTransform;
@@ -12553,6 +12555,152 @@ var WOZLLA;
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
 (function (WOZLLA) {
+    var utils;
+    (function (utils) {
+        function applyProperties(target, source) {
+            for (var i in source) {
+                if (typeof target[i] === 'undefined') {
+                    target[i] = source[i];
+                }
+            }
+            return target;
+        }
+        var contentParser = {
+            'json': function (xhr) {
+                return JSON.parse(xhr.responseText);
+            },
+            'arraybuffer': function (xhr) {
+                return xhr.response;
+            }
+        };
+        var empty = function () {
+        };
+        /**
+         * @class WOZLLA.utils.Ajax
+         */
+        var Ajax = (function () {
+            function Ajax() {
+            }
+            /**
+             * send a request with options
+             * @param {object} options
+             * @param {boolean} options.async
+             * @param {string} options.method GET/POST
+             * @param {string} options.contentType text/json/xml
+             * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
+             * @param {number} [options.timeout=30000]
+             * @param {function} options.success call when ajax request successfully
+             * @param {function} options.error call when ajax request error
+             */
+            Ajax.request = function (options) {
+                if (options === void 0) { options = {}; }
+                var xhr;
+                var timeoutId;
+                options = applyProperties(options, {
+                    url: '',
+                    async: true,
+                    method: 'GET',
+                    contentType: 'text',
+                    responseType: 'text/plain',
+                    timeout: 30000,
+                    success: empty,
+                    error: empty
+                });
+                xhr = new XMLHttpRequest();
+                xhr.responseType = options.responseType;
+                xhr.onreadystatechange = function () {
+                    var parser;
+                    if (xhr.readyState === 4) {
+                        xhr.onreadystatechange = empty;
+                        clearTimeout(timeoutId);
+                        parser = contentParser[options.contentType] || function () {
+                            return xhr.responseText;
+                        };
+                        options.success(parser(xhr));
+                    }
+                };
+                xhr.open(options.method, options.url, options.async);
+                timeoutId = setTimeout(function () {
+                    xhr.onreadystatechange = empty;
+                    xhr.abort();
+                    options.error({
+                        code: Ajax.ERROR_TIMEOUT,
+                        message: 'request timeout'
+                    });
+                }, options.timeout);
+                xhr.send();
+            };
+            /**
+             * internal ajax error code when timeout
+             * @property ERROR_TIMEOUT
+             * @static
+             * @readonly
+             */
+            Ajax.ERROR_TIMEOUT = 1;
+            /**
+             * internal ajax error code when server error
+             * @property ERROR_SERVER
+             * @static
+             * @readonly
+             */
+            Ajax.ERROR_SERVER = 2;
+            return Ajax;
+        })();
+        utils.Ajax = Ajax;
+    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="Asset.ts"/>
+/// <reference path="../utils/Ajax.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
+        function deepCopyJSON(o) {
+            var copy = o, k;
+            if (o && typeof o === 'object') {
+                copy = Object.prototype.toString.call(o) === '[object Array]' ? [] : {};
+                for (k in o) {
+                    copy[k] = deepCopyJSON(o[k]);
+                }
+            }
+            return copy;
+        }
+        var JSONAsset = (function (_super) {
+            __extends(JSONAsset, _super);
+            function JSONAsset() {
+                _super.apply(this, arguments);
+            }
+            JSONAsset.prototype.cloneData = function () {
+                if (!this._data) {
+                    return this._data;
+                }
+                return deepCopyJSON(this._data);
+            };
+            JSONAsset.prototype.load = function (onSuccess, onError) {
+                var _this = this;
+                WOZLLA.utils.Ajax.request({
+                    url: this.src,
+                    contentType: 'json',
+                    success: function (data) {
+                        _this._data = data;
+                        onSuccess();
+                    },
+                    error: function (error) {
+                        onError(error);
+                    }
+                });
+            };
+            JSONAsset.prototype.unload = function () {
+                this._data = null;
+                _super.prototype.unload.call(this);
+            };
+            return JSONAsset;
+        })(assets.Asset);
+        assets.JSONAsset = JSONAsset;
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
     var assets;
     (function (assets) {
         var proxy;
@@ -12592,6 +12740,10 @@ var WOZLLA;
                             callback && callback();
                         });
                     }
+                };
+                AssetProxy.prototype.onDestroy = function () {
+                    this.asset && this.asset.release();
+                    this.asset = null;
                 };
                 AssetProxy.prototype.checkDirty = function () {
                     if (!this.asset) {
@@ -12705,102 +12857,6 @@ var WOZLLA;
         })();
         assets.Sprite = Sprite;
     })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
-})(WOZLLA || (WOZLLA = {}));
-var WOZLLA;
-(function (WOZLLA) {
-    var utils;
-    (function (utils) {
-        function applyProperties(target, source) {
-            for (var i in source) {
-                if (typeof target[i] === 'undefined') {
-                    target[i] = source[i];
-                }
-            }
-            return target;
-        }
-        var contentParser = {
-            'json': function (xhr) {
-                return JSON.parse(xhr.responseText);
-            },
-            'arraybuffer': function (xhr) {
-                return xhr.response;
-            }
-        };
-        var empty = function () {
-        };
-        /**
-         * @class WOZLLA.utils.Ajax
-         */
-        var Ajax = (function () {
-            function Ajax() {
-            }
-            /**
-             * send a request with options
-             * @param {object} options
-             * @param {boolean} options.async
-             * @param {string} options.method GET/POST
-             * @param {string} options.contentType text/json/xml
-             * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
-             * @param {number} [options.timeout=30000]
-             * @param {function} options.success call when ajax request successfully
-             * @param {function} options.error call when ajax request error
-             */
-            Ajax.request = function (options) {
-                if (options === void 0) { options = {}; }
-                var xhr;
-                var timeoutId;
-                options = applyProperties(options, {
-                    url: '',
-                    async: true,
-                    method: 'GET',
-                    contentType: 'text',
-                    responseType: 'text/plain',
-                    timeout: 30000,
-                    success: empty,
-                    error: empty
-                });
-                xhr = new XMLHttpRequest();
-                xhr.responseType = options.responseType;
-                xhr.onreadystatechange = function () {
-                    var parser;
-                    if (xhr.readyState === 4) {
-                        xhr.onreadystatechange = empty;
-                        clearTimeout(timeoutId);
-                        parser = contentParser[options.contentType] || function () {
-                            return xhr.responseText;
-                        };
-                        options.success(parser(xhr));
-                    }
-                };
-                xhr.open(options.method, options.url, options.async);
-                timeoutId = setTimeout(function () {
-                    xhr.onreadystatechange = empty;
-                    xhr.abort();
-                    options.error({
-                        code: Ajax.ERROR_TIMEOUT,
-                        message: 'request timeout'
-                    });
-                }, options.timeout);
-                xhr.send();
-            };
-            /**
-             * internal ajax error code when timeout
-             * @property ERROR_TIMEOUT
-             * @static
-             * @readonly
-             */
-            Ajax.ERROR_TIMEOUT = 1;
-            /**
-             * internal ajax error code when server error
-             * @property ERROR_SERVER
-             * @static
-             * @readonly
-             */
-            Ajax.ERROR_SERVER = 2;
-            return Ajax;
-        })();
-        utils.Ajax = Ajax;
-    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="Sprite.ts"/>
 /// <reference path="../utils/Ajax.ts"/>
@@ -13993,6 +14049,10 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
+            SpriteRenderer.prototype.destroy = function () {
+                this._spriteProxy.onDestroy();
+                _super.prototype.destroy.call(this);
+            };
             SpriteRenderer.prototype.onAssetLoaded = function (asset) {
                 if (asset) {
                     this.sprite = asset.getSprite(this._spriteName);
@@ -14011,7 +14071,12 @@ var WOZLLA;
             name: "SpriteRenderer",
             properties: [{
                 name: 'color',
-                type: 'int'
+                type: 'int',
+                defaultValue: 0xFFFFFF
+            }, {
+                name: 'alpha',
+                type: 'int',
+                defaultValue: 1
             }, {
                 name: 'spriteAtlasSrc',
                 type: 'string'
@@ -15267,6 +15332,126 @@ var WOZLLA;
         utils.Ease = Ease;
     })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
 })(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var DragonBones;
+    (function (DragonBones) {
+        var SkeletonRenderer = (function (_super) {
+            __extends(SkeletonRenderer, _super);
+            function SkeletonRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(SkeletonRenderer.prototype, "skeletonSrc", {
+                get: function () {
+                    return this._skeletonSrc;
+                },
+                set: function (value) {
+                    this._skeletonSrc = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, "textureSrc", {
+                get: function () {
+                    return this._textureSrc;
+                },
+                set: function (value) {
+                    this._textureSrc = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, "armatureName", {
+                get: function () {
+                    return this._armatureName;
+                },
+                set: function (value) {
+                    this._armatureName = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, "armature", {
+                get: function () {
+                    return this._armature;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            SkeletonRenderer.prototype.init = function () {
+                this.initArmature();
+                _super.prototype.init.call(this);
+            };
+            SkeletonRenderer.prototype.destroy = function () {
+                this._skeletonJSONAsset && this._skeletonJSONAsset.release();
+                this._skeletonJSONAsset = null;
+                this._wTextureAtlas && this._wTextureAtlas.release();
+                this._wTextureAtlas = null;
+                this._armature && this._armature.dispose();
+                this._armature = null;
+                this._factory && this._factory.dispose();
+                if (this._container) {
+                    this._container.destroy();
+                    this._container.removeMe();
+                    this._container = null;
+                }
+                _super.prototype.destroy.call(this);
+            };
+            SkeletonRenderer.prototype.render = function (renderer, flags) {
+                console.log('render', flags);
+                this._container.visit(renderer, this.transform, flags);
+            };
+            SkeletonRenderer.prototype.loadAssets = function (callback) {
+                var _this = this;
+                var assetLoader;
+                if (this._skeletonSrc && this._textureSrc && this._armatureName) {
+                    assetLoader = WOZLLA.Director.getInstance().assetLoader;
+                    assetLoader.load(this._skeletonSrc, WOZLLA.assets.JSONAsset, function () {
+                        var jsonAsset = assetLoader.getAsset(_this._skeletonSrc);
+                        if (!jsonAsset) {
+                            callback();
+                            return;
+                        }
+                        jsonAsset.retain();
+                        assetLoader.load(_this._textureSrc, DragonBones.WTextureAtlas, function () {
+                            var wTextureAtlas = assetLoader.getAsset(_this._textureSrc);
+                            if (!wTextureAtlas) {
+                                jsonAsset.release();
+                                callback();
+                                return;
+                            }
+                            wTextureAtlas.retain();
+                            _this._skeletonJSONAsset = jsonAsset;
+                            _this._wTextureAtlas = wTextureAtlas;
+                            callback();
+                        });
+                    });
+                }
+                else {
+                    callback();
+                }
+            };
+            SkeletonRenderer.prototype.initArmature = function () {
+                var skeletonData, factory, armature, container;
+                if (this._skeletonJSONAsset && this._wTextureAtlas && this._armatureName) {
+                    factory = new DragonBones.WFactory();
+                    skeletonData = this._skeletonJSONAsset.cloneData();
+                    factory.addSkeletonData(dragonBones.DataParser.parseDragonBonesData(skeletonData), skeletonData.name);
+                    factory.addTextureAtlas(this._wTextureAtlas, this._wTextureAtlas.name);
+                    armature = factory.buildArmature(this._armatureName);
+                    container = armature.getDisplay();
+                    dragonBones.WorldClock.clock.add(armature);
+                    DragonBones.setupWorldClock();
+                    this._container = container;
+                    this._factory = factory;
+                    this._armature = armature;
+                }
+            };
+            return SkeletonRenderer;
+        })(WOZLLA.Renderer);
+        DragonBones.SkeletonRenderer = SkeletonRenderer;
+    })(DragonBones = WOZLLA.DragonBones || (WOZLLA.DragonBones = {}));
+})(WOZLLA || (WOZLLA = {}));
 /// <reference path="../../libs/DragonBones.d.ts"/>
 /// <reference path="../../src/core/GameObject.ts"/>
 var WOZLLA;
@@ -15413,12 +15598,24 @@ var WOZLLA;
 /// <reference path="../../libs/DragonBones.d.ts"/>
 /// <reference path="WSlot.ts"/>
 /// <reference path="WTextureAtlas.ts"/>
+/// <reference path="../../src/core/Scheduler.ts"/>
 /// <reference path="../../src/core/GameObject.ts"/>
 /// <reference path="../../src/component/renderer/SpriteRenderer.ts"/>
 var WOZLLA;
 (function (WOZLLA) {
     var DragonBones;
     (function (DragonBones) {
+        var clockSetup = false;
+        function setupWorldClock() {
+            if (clockSetup) {
+                return;
+            }
+            clockSetup = true;
+            WOZLLA.Director.getInstance().scheduler.scheduleLoop(function () {
+                dragonBones.WorldClock.clock.advanceTime(1 / 60);
+            });
+        }
+        DragonBones.setupWorldClock = setupWorldClock;
         var WFactory = (function (_super) {
             __extends(WFactory, _super);
             function WFactory() {
