@@ -71,6 +71,11 @@ module WOZLLA.component {
             this._spriteProxy = new WOZLLA.assets.proxy.SpriteAtlasProxy(this);
         }
 
+        destroy() {
+            this._spriteProxy.onDestroy();
+            super.destroy();
+        }
+
         onAssetLoaded(asset:WOZLLA.assets.Asset) {
             if(asset) {
                 this.sprite = (<WOZLLA.assets.SpriteAtlas>asset).getSprite(this._spriteName);
@@ -88,7 +93,12 @@ module WOZLLA.component {
         name: "SpriteRenderer",
         properties: [{
             name: 'color',
-            type: 'int'
+            type: 'int',
+            defaultValue: 0xFFFFFF
+        }, {
+            name: 'alpha',
+            type: 'int',
+            defaultValue: 1
         }, {
             name: 'spriteAtlasSrc',
             type: 'string'

@@ -76,7 +76,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleLoop(task, args) {
+        scheduleLoop(task, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task : task,
@@ -93,9 +93,8 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleFrame(task, frame, args) {
+        scheduleFrame(task, frame=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
-            frame = frame || 0;
             this._schedules[scheduleId] = {
                 task : task,
                 frame : frame,
@@ -112,7 +111,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleInterval(task, time, args) {
+        scheduleInterval(task, time=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task : task,
@@ -131,7 +130,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleTime(task, time, args) {
+        scheduleTime(task, time=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             time = time || 0;
             this._schedules[scheduleId] = {
