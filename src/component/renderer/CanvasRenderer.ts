@@ -51,6 +51,7 @@ module WOZLLA.component {
                 this.updateCanvas();
             }
             if(this._graphicsDirty) {
+                this.clearCanvas();
                 this.draw(this._context);
                 this._graphicsDirty = false;
                 this.generateCanvasTexture(renderer);
@@ -58,6 +59,10 @@ module WOZLLA.component {
             if(this._glTexture) {
                 super.render(renderer, flags);
             }
+        }
+
+        clearCanvas() {
+            this._context.clearRect(0, 0, this._canvasSize.width, this._canvasSize.height);
         }
 
         protected initCanvas() {
