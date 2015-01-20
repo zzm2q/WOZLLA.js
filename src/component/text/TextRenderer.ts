@@ -51,8 +51,8 @@ module WOZLLA.component {
             this._textDirty = true;
         }
 
-        get style():TextStyle { return this._textStyle; }
-        set style(value:TextStyle) {
+        get textStyle():TextStyle { return this._textStyle; }
+        set textStyle(value:TextStyle) {
             this._textStyle = value;
             this._textDirty = true;
         }
@@ -66,8 +66,11 @@ module WOZLLA.component {
         _textStyle:TextStyle = new TextStyle();
 
         render(renderer: renderer.IRenderer, flags: number): void {
+            var size;
             if(this._textDirty || this._textStyle.dirty) {
-                this.measureTextSize();
+                size = this.measureTextSize();
+                this.canvasWidth = size.width;
+                this.canvasHeight = size.height;
                 this._textStyle.dirty = false;
                 this._textDirty = false;
                 this._graphicsDirty = true;
@@ -103,15 +106,17 @@ module WOZLLA.component {
             context.restore();
         }
 
-        protected measureTextSize():void {
+        protected measureTextSize() {
             var measureSize;
             if(!this._text) {
-                this.canvasWidth = this.canvasHeight = 0;
+                measureSize = {
+                    width: 0,
+                    height: 0
+                };
             } else {
                 measureSize = TextRenderer.measureText(this._textStyle, this._text);
-                this.canvasWidth = measureSize.width;
-                this.canvasHeight = measureSize.height;
             }
+            return measureSize;
         }
 
         protected generateCanvasTexture(renderer:renderer.IRenderer):void {
