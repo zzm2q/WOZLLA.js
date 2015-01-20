@@ -1598,7 +1598,8 @@ declare module WOZLLA.assets.proxy {
 }
 declare module WOZLLA.assets.proxy {
     class SpriteAtlasProxy extends AssetProxy {
-        getSprite(spriteName: string): Sprite;
+        getSprite(spriteName: any): Sprite;
+        getFrameLength(): number;
         protected doLoad(callback: (asset: Asset) => void): void;
     }
 }
@@ -1681,18 +1682,20 @@ declare module WOZLLA.assets {
         _entireSprite: Sprite;
         _spriteData: any;
         _spriteCache: any;
+        _frameLengthCache: number;
         /**
          * new a SpriteAtlas
          * @method constructor
          * @param src
          */
         constructor(src: string);
+        getFrameLength(): number;
         /**
          * get sprite by name
          * @param name
          * @returns {WOZLLA.assets.Sprite}
          */
-        getSprite(name?: string): Sprite;
+        getSprite(name?: any): Sprite;
         /**
          * load this asset
          * @param onSuccess
@@ -2042,6 +2045,7 @@ declare module WOZLLA.component {
 declare module WOZLLA.component {
     class PropertyConverter {
         static array2rect(arr: number[]): math.Rectangle;
+        static array2circle(arr: number[]): math.Circle;
     }
 }
 declare module WOZLLA.component {
@@ -2067,6 +2071,30 @@ declare module WOZLLA.component {
         destroy(): void;
         onAssetLoaded(asset: assets.Asset): void;
         loadAssets(callback: Function): void;
+    }
+}
+declare module WOZLLA.component {
+    class AnimationRenderer extends SpriteRenderer {
+        static MODE_LOOP: string;
+        static MODE_NONLOOP: string;
+        autoOffset: boolean;
+        frameNum: number;
+        duration: number;
+        playMode: string;
+        frameLength: number;
+        _frameNum: number;
+        _frameNumDirty: boolean;
+        _autoOffset: boolean;
+        _playMode: string;
+        _playing: boolean;
+        _duration: number;
+        _playTween: utils.Tween;
+        play(duration?: number): void;
+        pause(): void;
+        resume(): void;
+        stop(): void;
+        render(renderer: renderer.IRenderer, flags: number): void;
+        protected updateAnimationFrame(): void;
     }
 }
 declare module WOZLLA.component {

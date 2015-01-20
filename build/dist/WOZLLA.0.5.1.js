@@ -4496,6 +4496,13 @@ var WOZLLA;
                     }
                     return null;
                 };
+                SpriteAtlasProxy.prototype.getFrameLength = function () {
+                    var frames;
+                    if (!this.asset) {
+                        return 0;
+                    }
+                    return this.asset.getFrameLength();
+                };
                 SpriteAtlasProxy.prototype.doLoad = function (callback) {
                     var src = this.newAssetSrc;
                     if (!src) {
@@ -4660,6 +4667,23 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
+            SpriteAtlas.prototype.getFrameLength = function () {
+                var frames;
+                if (!this._spriteData) {
+                    return 1;
+                }
+                frames = this._spriteData.frames;
+                if (Object.prototype.toString.call(frames) === '[object Array]') {
+                    return frames.length;
+                }
+                if (this._frameLengthCache == void 0) {
+                    this._frameLengthCache = 0;
+                    for (var _ in frames) {
+                        this._frameLengthCache++;
+                    }
+                }
+                return this._frameLengthCache;
+            };
             /**
              * get sprite by name
              * @param name
@@ -4667,7 +4691,7 @@ var WOZLLA;
              */
             SpriteAtlas.prototype.getSprite = function (name) {
                 var frameData, sprite;
-                if (!name) {
+                if (name == void 0) {
                     return this._entireSprite;
                 }
                 sprite = this._spriteCache[name];
@@ -4687,7 +4711,9 @@ var WOZLLA;
                         x: frameData.frame.x,
                         y: frameData.frame.y,
                         width: frameData.frame.width,
-                        height: frameData.frame.height
+                        height: frameData.frame.height,
+                        offsetX: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.x || 0) : 0),
+                        offsetY: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.y || 0) : 0)
                     }, name);
                     this._spriteCache[name] = sprite;
                     return sprite;
@@ -6020,6 +6046,9 @@ var WOZLLA;
             PropertyConverter.array2rect = function (arr) {
                 return new WOZLLA.math.Rectangle(arr[0], arr[1], arr[2], arr[3]);
             };
+            PropertyConverter.array2circle = function (arr) {
+                return new WOZLLA.math.Circle(arr[0], arr[1], arr[2]);
+            };
             return PropertyConverter;
         })();
         component.PropertyConverter = PropertyConverter;
@@ -6194,6 +6223,148 @@ var WOZLLA;
                 type: 'string'
             }]
         });
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="SpriteRenderer.ts"/>
+/// <reference path="../../utils/Tween.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var AnimationRenderer = (function (_super) {
+            __extends(AnimationRenderer, _super);
+            function AnimationRenderer() {
+                _super.apply(this, arguments);
+                this._frameNumDirty = true;
+                this._autoOffset = true;
+                this._playMode = AnimationRenderer.MODE_NONLOOP;
+                this._playing = false;
+            }
+            Object.defineProperty(AnimationRenderer.prototype, "autoOffset", {
+                get: function () {
+                    return this._autoOffset;
+                },
+                set: function (value) {
+                    this._autoOffset = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, "frameNum", {
+                get: function () {
+                    return this._frameNum;
+                },
+                set: function (value) {
+                    var value = Math.floor(value);
+                    if (this._frameNum === value)
+                        return;
+                    this._frameNum = value;
+                    this._frameNumDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, "duration", {
+                get: function () {
+                    return this._duration;
+                },
+                set: function (value) {
+                    this._duration = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, "playMode", {
+                get: function () {
+                    return this._playMode;
+                },
+                set: function (value) {
+                    this._playMode = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, "frameLength", {
+                get: function () {
+                    return this._spriteProxy.getFrameLength();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            AnimationRenderer.prototype.play = function (duration) {
+                if (duration === void 0) { duration = this._duration; }
+                if (this.frameLength <= 0)
+                    return;
+                this._duration = duration;
+                this._playing = true;
+                this._frameNum = 0;
+                if (this._playTween) {
+                    this._playTween.setPaused(true);
+                }
+                this._playTween = WOZLLA.utils.Tween.get(this).to({
+                    frameNum: this.frameLength
+                }, duration);
+            };
+            AnimationRenderer.prototype.pause = function () {
+                if (this._playing) {
+                    this._playTween.setPaused(true);
+                    this._playing = false;
+                }
+            };
+            AnimationRenderer.prototype.resume = function () {
+                if (!this._playing && this._playTween) {
+                    this._playTween.setPaused(false);
+                    this._playing = true;
+                }
+            };
+            AnimationRenderer.prototype.stop = function () {
+                if (this._playing || this._playTween) {
+                    this._playTween.setPaused(false);
+                    this._playTween = null;
+                }
+            };
+            AnimationRenderer.prototype.render = function (renderer, flags) {
+                if (this._frameNumDirty) {
+                    this._frameNumDirty = false;
+                    this.updateAnimationFrame();
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            AnimationRenderer.prototype.updateAnimationFrame = function () {
+                var frame;
+                var frameLength = this.frameLength;
+                if (frameLength === 0) {
+                    this.sprite = null;
+                }
+                else {
+                    if (this._frameNum >= frameLength) {
+                        if (this._playMode === AnimationRenderer.MODE_LOOP) {
+                            this.play();
+                        }
+                        else {
+                            this._frameNum = frameLength - 1;
+                            this.dispatchEvent(new WOZLLA.event.Event('animationend'));
+                            this.stop();
+                        }
+                    }
+                    this.sprite = this._spriteProxy.getSprite(this._frameNum);
+                    frame = this.sprite.frame;
+                    if (this._autoOffset) {
+                        this.spriteOffset = {
+                            x: -frame.offsetX / frame.width || 0,
+                            y: -frame.offsetY / frame.height || 0
+                        };
+                    }
+                    this.dispatchEvent(new WOZLLA.event.Event('framechanged', false, {
+                        frame: this._frameNum
+                    }));
+                }
+            };
+            AnimationRenderer.MODE_LOOP = 'loop';
+            AnimationRenderer.MODE_NONLOOP = 'nonloop';
+            return AnimationRenderer;
+        })(component.SpriteRenderer);
+        component.AnimationRenderer = AnimationRenderer;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="SpriteRenderer.ts"/>
