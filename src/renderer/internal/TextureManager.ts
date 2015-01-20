@@ -24,12 +24,12 @@ module WOZLLA.renderer {
             return this._textureMap[id];
         }
 
-        generateTexture(descriptor:ITextureDescriptor):ITexture {
+        generateTexture(descriptor:ITextureDescriptor, textureId?):ITexture {
             var texture;
             var pvrtcExt:any;
             var compressedType;
             var gl = this._gl;
-            var id = gl.createTexture();
+            var id = textureId || gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, id);
             gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -67,6 +67,10 @@ module WOZLLA.renderer {
             texture = new Texture(id, descriptor);
             this._textureMap[id] = texture;
             return texture;
+        }
+
+        updateTexture(texture:ITexture):void {
+            this.generateTexture(texture.descriptor, texture.id);
         }
 
         deleteTexture(texture:ITexture):void {
