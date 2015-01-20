@@ -88,7 +88,7 @@ The parts of technologies WOZLLA.js using was learn from the following libraries
 
 The MIT License (MIT)
 
-Copyright (c) 2014-2015 WOZLLA.js
+Copyright (c) 2014-2015 Wozlla
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
