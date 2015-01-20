@@ -1,61 +1,102 @@
 /// <reference path="../../assets/GLTextureAsset.ts"/>
+/// <reference path="QuadRenderer.ts"/>
 module WOZLLA.component {
-
-    var global:any = window;
-    var createjs:any = global.createjs;
 
     export class CanvasRenderer extends QuadRenderer {
 
-        protected canvas:any;
-        protected context:any;
-        protected canvasSize:WOZLLA.math.Size;
-        protected graphics:any;
-        protected dirty:boolean = true;
-
-        private _glTexture;
-
-        init():void {
-            if(this.canvasSize) {
-                Assert.isTrue(this.canvasSize.width > 0 && this.canvasSize.width <= 2048);
-                Assert.isTrue(this.canvasSize.height > 0 && this.canvasSize.height <= 2048);
-                this.initCanvas(this.canvasSize.width, this.canvasSize.height);
-                this.graphics = new createjs.Graphics();
-                this.draw(this.graphics);
-                this.graphics.draw(this.context);
-            }
-            super.init();
+        get canvasSize():WOZLLA.math.Size {
+            return this._canvasSize;
+        }
+        set canvasSize(value:WOZLLA.math.Size) {
+            this._canvasSize = value;
+            this._sizeDirty = true;
+        }
+        get canvasWidth():number { return this._canvasSize.width; }
+        set canvasWidth(value:number) {
+            this._canvasSize.width = value;
+            this._sizeDirty = true;
+        }
+        get canvasHeight():number { return this._canvasSize.height; }
+        set canvasHeight(value:number) {
+            this._canvasSize.height = value;
+            this._sizeDirty = true;
         }
 
-        initCanvas(width:number, height:number) {
-            var canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            this.canvas = canvas;
-            this.context = canvas.getContext('2d');
+        _canvas;
+        _context;
+        _canvasSize:WOZLLA.math.Size = new WOZLLA.math.Size(0, 0);
+
+        _glTexture;
+
+        _graphicsDirty:boolean = true;
+        _sizeDirty:boolean = true;
+
+        destroy():void {
+            this.destroyCanvas();
+            super.destroy();
         }
 
-        draw(graphics:any):void {
-
-        }
-
-        clear():void {
-            this.context.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
+        draw(context):void {
+            throw new Error('abstract method');
         }
 
         render(renderer: renderer.IRenderer, flags: number): void {
-            if(this.canvas && !this._glTexture) {
-                this._glTexture = renderer.textureManager.generateTexture(new WOZLLA.assets.HTMLImageDescriptor(this.canvas));
-                this.setTexture(this._glTexture);
-                this.dirty = false;
+            if(!this._canvas) {
+                this.initCanvas();
+            }
+            if(!this._canvas) {
+                return;
+            }
+            if(this._sizeDirty) {
+                this.updateCanvas();
+            }
+            if(this._graphicsDirty) {
+                this.draw(this._context);
+                this._graphicsDirty = false;
+                this.generateCanvasTexture(renderer);
             }
             if(this._glTexture) {
-                if(this.dirty) {
-                    this.draw(this.graphics);
-                    this.graphics.draw(this.context);
-                    this.dirty = false;
-                    renderer.textureManager.updateTexture(this._glTexture);
-                }
                 super.render(renderer, flags);
+            }
+        }
+
+        protected initCanvas() {
+            if(this._canvasSize.width <= 0 || this._canvasSize.height <= 0) {
+                return;
+            }
+            this._canvas = document.createElement('canvas');
+            this._canvas.width = this._canvasSize.width;
+            this._canvas.height = this._canvasSize.height;
+            this._context = this._canvas.getContext('2d');
+            this._sizeDirty = false;
+            this._graphicsDirty = true;
+        }
+
+        protected updateCanvas() {
+            if(this._canvasSize.width <= 0 || this._canvasSize.height <= 0) {
+                this.destroyCanvas();
+                this._graphicsDirty = true;
+            }
+            this._canvas.width = this._canvasSize.width;
+            this._canvas.height = this._canvasSize.height;
+            this._sizeDirty = false;
+            this._graphicsDirty = true;
+        }
+
+        protected destroyCanvas() {
+            this._canvas && this._canvas.dispose && this._canvas.dispose();
+            this._context && this._context.dispose && this._context.dispose();
+            this._canvas = this._context = null;
+        }
+
+        protected generateCanvasTexture(renderer:renderer.IRenderer):void {
+            if(!this._glTexture) {
+                this._glTexture = renderer.textureManager.generateTexture(
+                    new WOZLLA.assets.HTMLImageDescriptor(this._canvas));
+                this.setTexture(this._glTexture);
+            } else {
+                renderer.textureManager.updateTexture(this._glTexture);
+                this.setTexture(this._glTexture);
             }
         }
 
