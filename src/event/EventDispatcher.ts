@@ -1,6 +1,8 @@
 /// <reference path="Event.ts"/>
 module WOZLLA.event {
 
+    var SCOPE = '_EventDispatcher_scope';
+
     class ListenerList {
 
         _listeners = [];
@@ -9,11 +11,15 @@ module WOZLLA.event {
             this._listeners.push(listener);
         }
 
-        remove(listener:Function) {
+        remove(listener:Function, scope?:any) {
             var i, len = this._listeners.length;
+            var l;
             for(i=0; i<len; i++) {
-                if(this._listeners[i] === listener) {
-                    this._listeners.splice(i, 1);
+                l = this._listeners[i];
+                if(l === listener) {
+                    if(!scope || scope === l[SCOPE]) {
+                        this._listeners.splice(i, 1);
+                    }
                     return true;
                 }
             }
@@ -85,6 +91,11 @@ module WOZLLA.event {
             this._getListenerList(type, useCapture).add(listener);
         }
 
+        addListenerScope(type:string, listener:Function, scope:any, useCapture:boolean=false) {
+            listener[SCOPE] = scope;
+            this.addListener(type, listener, useCapture);
+        }
+
         /**
          * @method removeListener
          * @param {string} type
@@ -92,6 +103,10 @@ module WOZLLA.event {
          */
         removeListener(type:string, listener:Function, useCapture:boolean=false):boolean {
             return this._getListenerList(type, useCapture).remove(listener);
+        }
+
+        removeListenerScope(type:string, listener:Function, scope:any , userCapture:boolean=false):boolean {
+            return this._getListenerList(type, userCapture).remove(listener, scope);
         }
 
         /**
@@ -156,6 +171,7 @@ module WOZLLA.event {
         _dispatchEventInPhase(event:Event, phase:EventPhase):boolean {
             var i, len;
             var listener:Function;
+            var scope:any;
             var listenerList:ListenerList;
 
             event._eventPhase = phase;
@@ -167,7 +183,12 @@ module WOZLLA.event {
             if(len > 0) {
                 for (i = len-1; i >= 0; i--) {
                     listener = listenerList.get(i);
-                    listener(event);
+                    scope = listener[SCOPE];
+                    if(scope) {
+                        listener.call(scope, event);
+                    } else {
+                        listener(event);
+                    }
 
                     // handle remove listener when client call event.removeCurrentListener();
                     if(event._listenerRemove) {
