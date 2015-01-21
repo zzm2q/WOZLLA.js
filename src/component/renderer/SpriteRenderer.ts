@@ -105,6 +105,9 @@ module WOZLLA.component {
         }, {
             name: 'spriteName',
             type: 'string'
+        }, {
+            name: 'imageSrc',
+            type: 'string'
         }]
     });
 

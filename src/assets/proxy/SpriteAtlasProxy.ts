@@ -10,7 +10,6 @@ module WOZLLA.assets.proxy {
         }
 
         getFrameLength():number {
-            var frames;
             if(!this.asset) {
                 return 0;
             }

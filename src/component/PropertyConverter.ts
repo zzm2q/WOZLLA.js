@@ -11,6 +11,14 @@ module WOZLLA.component {
             return new WOZLLA.math.Circle(arr[0], arr[1], arr[2]);
         }
 
+        public static json2TextStyle(json:any):TextStyle {
+            var style = new TextStyle();
+            for(var i in json) {
+                style[i] = json[i];
+            }
+            return style;
+        }
+
     }
 
 }

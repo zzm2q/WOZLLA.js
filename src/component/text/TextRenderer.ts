@@ -1,4 +1,5 @@
 /// <reference path="../renderer/CanvasRenderer.ts"/>
+/// <reference path="../PropertyConverter.ts"/>
 module WOZLLA.component {
 
     var helpCanvas = document.createElement('canvas');
@@ -237,5 +238,17 @@ module WOZLLA.component {
         _baseline:string = TextStyle.TOP;
 
     }
+
+    Component.register(TextRenderer, {
+        name: 'TextRenderer',
+        properties: [{
+            name: 'text',
+            type: 'string'
+        }, {
+            name: 'style',
+            type: 'object',
+            convert: PropertyConverter.json2TextStyle
+        }]
+    });
 
 }
