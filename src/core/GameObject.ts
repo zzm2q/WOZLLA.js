@@ -660,6 +660,78 @@ module WOZLLA {
             }
         }
 
+
+        static QUERY_FULL_REGEX = /((.*?):(.*?))\[(.*?)\]$/;
+        static QUERY_COMP_REGEX = /((.*?):(.*?))$/;
+        static QUERY_OBJ_ATTR_REGEX = /(.*?)\[(.*?)\]$/;
+
+        query(expr:string, record?:QueryRecord):any {
+            var result,
+                compExpr,
+                objExpr,
+                compName,
+                attrName;
+
+            var objArr;
+
+            var hasAttr = expr.indexOf('[') !== -1 && expr.indexOf(']') !== -1;
+            var hasComp = expr.indexOf(':') !== -1;
+
+            if(hasComp && hasAttr) {
+                result = GameObject.QUERY_FULL_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+                attrName = result[4];
+            } else if(hasComp && !hasAttr) {
+                result = GameObject.QUERY_COMP_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+            } else if(!hasComp && hasAttr) {
+                result = GameObject.QUERY_OBJ_ATTR_REGEX.exec(expr);
+                objExpr = result[1];
+                attrName = result[2];
+            } else {
+                objExpr = expr;
+            }
+            if(record) {
+                record.compExpr = compExpr;
+                record.objExpr = objExpr;
+                record.compName = compName;
+                record.attrName = attrName;
+            }
+
+            if(!objExpr) {
+                result = this;
+            } else {
+                result = this;
+                objArr = objExpr.split('/');
+                for(var i=0,len=objArr.length; i<len; i++) {
+                    if(!objArr[i]) {
+                        break;
+                    }
+                    result = result.getChild(objArr[i]);
+                    if(!result) {
+                        break;
+                    }
+                }
+            }
+
+            if(result && compName) {
+                result = result.getComponent(Component.getType(compName));
+            }
+
+            if(result && record) {
+                record.target = result;
+            }
+
+            if(result && attrName) {
+                result = result[attrName];
+            }
+            return result;
+        }
+
         protected checkComponentDependency(comp:Component):boolean {
             var Type:Function;
             var requires = comp.listRequiredComponents();
@@ -671,6 +743,14 @@ module WOZLLA {
             return ret;
         }
 
+    }
+
+    export class QueryRecord {
+        compExpr = null;
+        objExpr = null;
+        compName = null;
+        attrName = null;
+        target = null;
     }
 
 }
