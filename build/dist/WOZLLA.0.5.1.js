@@ -191,6 +191,7 @@ var WOZLLA;
 (function (WOZLLA) {
     var event;
     (function (_event) {
+        var SCOPE = '_EventDispatcher_scope';
         var ListenerList = (function () {
             function ListenerList() {
                 this._listeners = [];
@@ -198,11 +199,15 @@ var WOZLLA;
             ListenerList.prototype.add = function (listener) {
                 this._listeners.push(listener);
             };
-            ListenerList.prototype.remove = function (listener) {
+            ListenerList.prototype.remove = function (listener, scope) {
                 var i, len = this._listeners.length;
+                var l;
                 for (i = 0; i < len; i++) {
-                    if (this._listeners[i] === listener) {
-                        this._listeners.splice(i, 1);
+                    l = this._listeners[i];
+                    if (l === listener) {
+                        if (!scope || scope === l[SCOPE]) {
+                            this._listeners.splice(i, 1);
+                        }
                         return true;
                     }
                 }
@@ -267,6 +272,11 @@ var WOZLLA;
                 if (useCapture === void 0) { useCapture = false; }
                 this._getListenerList(type, useCapture).add(listener);
             };
+            EventDispatcher.prototype.addListenerScope = function (type, listener, scope, useCapture) {
+                if (useCapture === void 0) { useCapture = false; }
+                listener[SCOPE] = scope;
+                this.addListener(type, listener, useCapture);
+            };
             /**
              * @method removeListener
              * @param {string} type
@@ -275,6 +285,10 @@ var WOZLLA;
             EventDispatcher.prototype.removeListener = function (type, listener, useCapture) {
                 if (useCapture === void 0) { useCapture = false; }
                 return this._getListenerList(type, useCapture).remove(listener);
+            };
+            EventDispatcher.prototype.removeListenerScope = function (type, listener, scope, userCapture) {
+                if (userCapture === void 0) { userCapture = false; }
+                return this._getListenerList(type, userCapture).remove(listener, scope);
             };
             /**
              * @method clearListeners
@@ -327,6 +341,7 @@ var WOZLLA;
             EventDispatcher.prototype._dispatchEventInPhase = function (event, phase) {
                 var i, len;
                 var listener;
+                var scope;
                 var listenerList;
                 event._eventPhase = phase;
                 event._listenerRemove = false;
@@ -336,7 +351,13 @@ var WOZLLA;
                 if (len > 0) {
                     for (i = len - 1; i >= 0; i--) {
                         listener = listenerList.get(i);
-                        listener(event);
+                        scope = listener[SCOPE];
+                        if (scope) {
+                            listener.call(scope, event);
+                        }
+                        else {
+                            listener(event);
+                        }
                         // handle remove listener when client call event.removeCurrentListener();
                         if (event._listenerRemove) {
                             event._listenerRemove = false;
@@ -1835,10 +1856,12 @@ var WOZLLA;
             /**
              * get the GameObject of this component belongs to.
              * @property {WOZLLA.GameObject} gameObject
-             * @readonly
              */
             get: function () {
                 return this._gameObject;
+            },
+            set: function (value) {
+                this._gameObject = value;
             },
             enumerable: true,
             configurable: true
@@ -1870,6 +1893,14 @@ var WOZLLA;
         Component.prototype.listRequiredComponents = function () {
             return [];
         };
+        Component.getType = function (name) {
+            var ret = this.ctorMap[name];
+            WOZLLA.Assert.isNotUndefined(ret, 'Can\'t found component: ' + name);
+            return ret;
+        };
+        Component.getName = function (Type) {
+            return Type.componentName;
+        };
         /**
          * register an component class and it's configuration
          * @method register
@@ -1883,6 +1914,7 @@ var WOZLLA;
             WOZLLA.Assert.isUndefined(Component.configMap[config.name]);
             Component.ctorMap[config.name] = ctor;
             Component.configMap[config.name] = config;
+            ctor.componentName = config.name;
         };
         Component.unregister = function (name) {
             WOZLLA.Assert.isString(name);
@@ -1903,7 +1935,10 @@ var WOZLLA;
         };
         Component.getConfig = function (name) {
             var config;
-            WOZLLA.Assert.isString(name);
+            WOZLLA.Assert.isNotUndefined(name);
+            if (typeof name === 'function') {
+                name = Component.getName(name);
+            }
             config = Component.configMap[name];
             WOZLLA.Assert.isNotUndefined(config);
             return config;
@@ -2664,6 +2699,65 @@ var WOZLLA;
                 });
             }
         };
+        GameObject.prototype.query = function (expr, record) {
+            var result, compExpr, objExpr, compName, attrName;
+            var objArr;
+            var hasAttr = expr.indexOf('[') !== -1 && expr.indexOf(']') !== -1;
+            var hasComp = expr.indexOf(':') !== -1;
+            if (hasComp && hasAttr) {
+                result = GameObject.QUERY_FULL_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+                attrName = result[4];
+            }
+            else if (hasComp && !hasAttr) {
+                result = GameObject.QUERY_COMP_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+            }
+            else if (!hasComp && hasAttr) {
+                result = GameObject.QUERY_OBJ_ATTR_REGEX.exec(expr);
+                objExpr = result[1];
+                attrName = result[2];
+            }
+            else {
+                objExpr = expr;
+            }
+            if (record) {
+                record.compExpr = compExpr;
+                record.objExpr = objExpr;
+                record.compName = compName;
+                record.attrName = attrName;
+            }
+            if (!objExpr) {
+                result = this;
+            }
+            else {
+                result = this;
+                objArr = objExpr.split('/');
+                for (var i = 0, len = objArr.length; i < len; i++) {
+                    if (!objArr[i]) {
+                        break;
+                    }
+                    result = result.getChild(objArr[i]);
+                    if (!result) {
+                        break;
+                    }
+                }
+            }
+            if (result && compName) {
+                result = result.getComponent(WOZLLA.Component.getType(compName));
+            }
+            if (result && record) {
+                record.target = result;
+            }
+            if (result && attrName) {
+                result = result[attrName];
+            }
+            return result;
+        };
         GameObject.prototype.checkComponentDependency = function (comp) {
             var Type;
             var requires = comp.listRequiredComponents();
@@ -2676,6 +2770,9 @@ var WOZLLA;
         };
         GameObject.MASK_TRANSFORM_DIRTY = 0x1;
         GameObject.MASK_VISIBLE = 0x10;
+        GameObject.QUERY_FULL_REGEX = /((.*?):(.*?))\[(.*?)\]$/;
+        GameObject.QUERY_COMP_REGEX = /((.*?):(.*?))$/;
+        GameObject.QUERY_OBJ_ATTR_REGEX = /(.*?)\[(.*?)\]$/;
         return GameObject;
     })(WOZLLA.event.EventDispatcher);
     WOZLLA.GameObject = GameObject;
@@ -4459,6 +4556,9 @@ var WOZLLA;
                             callback && callback();
                         });
                     }
+                    else {
+                        callback && callback();
+                    }
                 };
                 AssetProxy.prototype.onDestroy = function () {
                     this.asset && this.asset.release();
@@ -4497,7 +4597,6 @@ var WOZLLA;
                     return null;
                 };
                 SpriteAtlasProxy.prototype.getFrameLength = function () {
-                    var frames;
                     if (!this.asset) {
                         return 0;
                     }
@@ -6049,6 +6148,13 @@ var WOZLLA;
             PropertyConverter.array2circle = function (arr) {
                 return new WOZLLA.math.Circle(arr[0], arr[1], arr[2]);
             };
+            PropertyConverter.json2TextStyle = function (json) {
+                var style = new component.TextStyle();
+                for (var i in json) {
+                    style[i] = json[i];
+                }
+                return style;
+            };
             return PropertyConverter;
         })();
         component.PropertyConverter = PropertyConverter;
@@ -6220,6 +6326,9 @@ var WOZLLA;
                 type: 'string'
             }, {
                 name: 'spriteName',
+                type: 'string'
+            }, {
+                name: 'imageSrc',
                 type: 'string'
             }]
         });
@@ -6651,6 +6760,7 @@ var WOZLLA;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="../renderer/CanvasRenderer.ts"/>
+/// <reference path="../PropertyConverter.ts"/>
 var WOZLLA;
 (function (WOZLLA) {
     var component;
@@ -6962,6 +7072,17 @@ var WOZLLA;
             return TextStyle;
         })();
         component.TextStyle = TextStyle;
+        WOZLLA.Component.register(TextRenderer, {
+            name: 'TextRenderer',
+            properties: [{
+                name: 'text',
+                type: 'string'
+            }, {
+                name: 'style',
+                type: 'object',
+                convert: component.PropertyConverter.json2TextStyle
+            }]
+        });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="Component.ts"/>
@@ -7135,7 +7256,7 @@ var WOZLLA;
                 var components = data.components;
                 if (components && components.length > 0) {
                     components.forEach(function (compData) {
-                        gameObj.addComponent(_this._newComponent(compData));
+                        gameObj.addComponent(_this._newComponent(compData, gameObj));
                     });
                 }
                 var createdChildCount = 0;
@@ -7185,18 +7306,36 @@ var WOZLLA;
                     callback(root);
                 });
             };
-            JSONXBuilder.prototype._newComponent = function (compData) {
+            JSONXBuilder.prototype._newComponent = function (compData, gameObj) {
                 var component = WOZLLA.Component.create(compData.name);
                 var config = WOZLLA.Component.getConfig(compData.name);
-                config.properties.forEach(function (prop) {
-                    var value = compData.properties[prop.name];
-                    value = typeof value === 'undefined' ? prop.defaultValue : value;
-                    if (prop.convert) {
-                        value = prop.convert(value);
-                    }
-                    component[prop.name] = value;
-                });
+                component.gameObject = gameObj;
+                this._applyComponentProperties(component, config.properties, compData);
                 return component;
+            };
+            JSONXBuilder.prototype._applyComponentProperties = function (component, properties, compData) {
+                var _this = this;
+                if (properties && properties.length > 0) {
+                    properties.forEach(function (prop) {
+                        if (prop.group) {
+                            _this._applyComponentProperties(component, prop.properties, compData);
+                        }
+                        else if (prop.extend) {
+                            var config = WOZLLA.Component.getConfig(prop.extend);
+                            if (config) {
+                                _this._applyComponentProperties(component, config.properties, compData);
+                            }
+                        }
+                        else {
+                            var value = compData.properties[prop.name];
+                            value = typeof value === 'undefined' ? prop.defaultValue : value;
+                            if (prop.convert) {
+                                value = prop.convert(value);
+                            }
+                            component[prop.name] = value;
+                        }
+                    });
+                }
             };
             JSONXBuilder.prototype._loadAssets = function (callback) {
                 this.root.loadAssets(callback);

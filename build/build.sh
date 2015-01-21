@@ -9,6 +9,7 @@ rm -R dist
 echo "compile ts"
 find ../src ../extensions/DragonBones -name "*.ts" >> files.txt
 tsc -d @files.txt --out dist/WOZLLA.${version}.js -t ES5
+cp dist/WOZLLA.${version}.d.ts dist/WOZLLA.d.ts
 rm files.txt
 echo "combine dependencies"
 cat ../libs/hammer.1.1.3.js \
