@@ -13,9 +13,9 @@ module WOZLLA {
         /**
          * get the GameObject of this component belongs to.
          * @property {WOZLLA.GameObject} gameObject
-         * @readonly
          */
         get gameObject():GameObject { return this._gameObject; }
+        set gameObject(value:GameObject) { this._gameObject = value; }
 
         /**
          *  get transform of the gameObject of this component
@@ -46,6 +46,16 @@ module WOZLLA {
         private static ctorMap:any = {};
         private static configMap:any = {};
 
+        public static getType(name:string) {
+            var ret = this.ctorMap[name]
+            Assert.isNotUndefined(ret, 'Can\'t found component: ' + name);
+            return ret;
+        }
+
+        public static getName(Type:Function) {
+            return (<any>Type).componentName;
+        }
+
         /**
          * register an component class and it's configuration
          * @method register
@@ -59,6 +69,7 @@ module WOZLLA {
             Assert.isUndefined(Component.configMap[config.name]);
             Component.ctorMap[config.name] = ctor;
             Component.configMap[config.name] = config;
+            (<any>ctor).componentName = config.name;
         }
 
         public static unregister(name:string) {
@@ -80,9 +91,12 @@ module WOZLLA {
             return <WOZLLA.Component>new (<any>ctor)();
         }
 
-        public static getConfig(name:string):any {
+        public static getConfig(name:any):any {
             var config:any;
-            Assert.isString(name);
+            Assert.isNotUndefined(name);
+            if(typeof name === 'function') {
+                name = Component.getName(name);
+            }
             config = Component.configMap[name];
             Assert.isNotUndefined(config);
             return config;
