@@ -17,7 +17,10 @@ module WOZLLA.assets.proxy {
 
         loadAsset(callback:Function) {
             if(this.checkDirty()) {
-                if(this.loading) return;
+                if(this.loading) {
+                    callback && callback();
+                    return;
+                }
                 this.loading = true;
                 this.asset && this.asset.release();
                 this.asset = null;
@@ -37,6 +40,8 @@ module WOZLLA.assets.proxy {
                     this.proxyTarget.onAssetLoaded(asset);
                     callback && callback();
                 });
+            } else {
+                callback && callback();
             }
         }
 
