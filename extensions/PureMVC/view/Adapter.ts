@@ -18,6 +18,10 @@ module WOZLLA.PureMVC {
             return null;
         }
 
+        getView(index:any, callback:(view:SimpleView) => void) {
+
+        }
+
         onStoreBind(store:Store, callback?:Function) {
             console.log('onbind', store, callback);
             callback && callback();

@@ -16,6 +16,11 @@ module WOZLLA.jsonx {
         private doLoad:boolean = false;
         private doInit:boolean = false;
         private loadCallback:(root:WOZLLA.GameObject, done:Function) => void;
+        private async:boolean = true;
+
+        setSync():void {
+            this.async = false;
+        }
 
         instantiateWithSrc(src, callback:(root:WOZLLA.GameObject, done:Function) => void = emptyCallback) {
             this.src = src;
@@ -81,6 +86,7 @@ module WOZLLA.jsonx {
                 WOZLLA.utils.Ajax.request({
                     url: this.src,
                     contentType: 'json',
+                    async: this.async,
                     success: (data) => {
                         this.data = data;
                         callback && callback();
@@ -185,8 +191,8 @@ module WOZLLA.jsonx {
                         }
                     } else {
                         var value = compData.properties[prop.name];
-                        value = typeof value === 'undefined' ? prop.defaultValue : value;
-                        if (prop.convert) {
+                        value = value == void 0 ? prop.defaultValue : value;
+                        if (prop.convert && value) {
                             value = prop.convert(value);
                         }
                         component[prop.name] = value;

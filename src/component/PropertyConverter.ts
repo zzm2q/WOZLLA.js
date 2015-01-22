@@ -1,4 +1,3 @@
-/// <reference path="../math/Rectangle.ts"/>
 module WOZLLA.component {
 
     export class PropertyConverter {
@@ -19,6 +18,13 @@ module WOZLLA.component {
             return style;
         }
 
+        public static array2Padding(arr:Array<number>):WOZLLA.layout.Padding {
+            return new WOZLLA.layout.Padding(arr[0], arr[1], arr[2], arr[3]);
+        }
+
+        public static array2Margin(arr:Array<number>):WOZLLA.layout.Margin {
+            return new WOZLLA.layout.Margin(arr[0], arr[1], arr[2], arr[3]);
+        }
     }
 
 }

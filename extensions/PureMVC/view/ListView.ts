@@ -19,7 +19,6 @@ module WOZLLA.PureMVC {
         addItemViewAt(itemView:SimpleView, idx:number) {
             this._itemViews.splice(idx, 0, itemView);
             itemView.gameObject.z = idx;
-            console.log(idx);
             this.gameObject.addChild(itemView.gameObject);
         }
 

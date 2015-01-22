@@ -8,6 +8,40 @@ module WOZLLA {
      */
     export class RectTransform extends Transform {
 
+        public static getMode(name):number {
+            var names = name.split('_');
+            var value = 0;
+            switch(names[0]) {
+                case 'Left':
+                    value |= RectTransform.ANCHOR_LEFT;
+                    break;
+                case 'Right':
+                    value |= RectTransform.ANCHOR_RIGHT;
+                    break;
+                case 'Strength':
+                    value |= RectTransform.ANCHOR_HORIZONTAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_CENTER;
+                    break;
+            }
+            switch(names[1]) {
+                case 'Top':
+                    value |= RectTransform.ANCHOR_TOP;
+                    break;
+                case 'Bottom':
+                    value |= RectTransform.ANCHOR_BOTTOM;
+                    break;
+                case 'Strength':
+                    value |= RectTransform.ANCHOR_VERTICAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_MIDDLE;
+                    break;
+            }
+            return value;
+        }
+
         /**
          * vertical anchor mode
          * @property {number} ANCHOR_TOP
@@ -189,7 +223,11 @@ module WOZLLA {
          * @param {WOZLLA.RectTransform} rectTransform
          */
         set(rectTransform:RectTransform) {
-            this._anchorMode = rectTransform.anchorMode;
+            var anchorMode:any = rectTransform.anchorMode;
+            if(typeof anchorMode === 'string') {
+                anchorMode = RectTransform.getMode(anchorMode);
+            }
+            this._anchorMode = anchorMode;
             this._width = rectTransform.width || 0;
             this._height = rectTransform.height || 0;
             this._top = rectTransform.top || 0;

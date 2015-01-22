@@ -94,6 +94,12 @@ module WOZLLA {
         get children():GameObject[] { return this._children.slice(0); }
 
         /**
+         * get raw children
+         * @returns {WOZLLA.GameObject[]}
+         */
+        get rawChildren():GameObject[] { return this._children; }
+
+        /**
          * get child count
          * @property {number} childCount
          * @member WOZLLA.GameObject
@@ -257,14 +263,19 @@ module WOZLLA {
             if(child._parent) {
                 child.removeMe();
             }
-            child.dispatchEvent(new CoreEvent('beforeadd', true));
+            child.dispatchEvent(new CoreEvent('beforeadd', false, {
+                parent: this
+            }));
             this._children.push(child);
             if(sort) {
                 this._children.sort(comparator);
             }
             child._parent = this;
             child._transform.dirty = true;
-            child.dispatchEvent(new CoreEvent('add', true));
+            child.dispatchEvent(new CoreEvent('add', false));
+            this.dispatchEvent(new CoreEvent('childadd', false, {
+                child: child
+            }));
             return true;
         }
 
@@ -276,10 +287,15 @@ module WOZLLA {
         removeChild(child:GameObject):boolean {
             var idx = this._children.indexOf(child);
             if(idx !== -1) {
-                child.dispatchEvent(new CoreEvent('beforeremove', true, null, false));
+                child.dispatchEvent(new CoreEvent('beforeremove', false));
                 this._children.splice(idx, 1);
                 child._parent = null;
-                child.dispatchEvent(new CoreEvent('remove', true, null, false));
+                child.dispatchEvent(new CoreEvent('remove', false, {
+                    parent: this
+                }));
+                this.dispatchEvent(new CoreEvent('childremove', false, {
+                    child: child
+                }));
                 return true;
             }
             return false;
@@ -401,6 +417,9 @@ module WOZLLA {
          */
         hasComponent(Type:Function):boolean {
             var comp, i, len;
+            if(Type === RectTransform) {
+                return !!this._rectTransform;
+            }
             if(this._components.length <= 0) {
                 return false;
             }
@@ -443,9 +462,7 @@ module WOZLLA {
             if(this._components.indexOf(comp) !== -1) {
                 return false;
             }
-            if(!this.checkComponentDependency(comp)) {
-                throw new Error('Can\'t not add, because of dependency');
-            }
+            this.checkComponentDependency(comp);
             if(comp._gameObject) {
                 comp._gameObject.removeComponent(comp);
             }
@@ -475,9 +492,7 @@ module WOZLLA {
                 for(i=0,len=this._components.length; i<len; i++) {
                     otherComp = this._components[i];
                     if(otherComp !== comp) {
-                        if(this.checkComponentDependency(otherComp)) {
-                            throw new Error('Can\'t not remove, because of dependency');
-                        }
+                        this.checkComponentDependency(otherComp, true);
                     }
                 }
                 this._components.splice(idx, 1);
@@ -732,15 +747,21 @@ module WOZLLA {
             return result;
         }
 
-        protected checkComponentDependency(comp:Component):boolean {
+        protected checkComponentDependency(comp:Component, isRemove:boolean=false) {
             var Type:Function;
             var requires = comp.listRequiredComponents();
-            var ret:boolean = true;
+            if(!requires || requires.length === 0) return;
             for(var i=0, len=requires.length; i<len; i++) {
                 Type = requires[i];
-                ret = ret && this.hasComponent(Type);
+                if(!this.hasComponent(Type)) {
+                    if(isRemove) {
+                        throw new Error('Can NOT remove: Component[' + Component.getName(comp['constructor']) + '] depend on it');
+                    } else {
+                        var name = Type === RectTransform ? 'RectTransform' : Component.getName(Type);
+                        throw new Error('Can NOT add: Component[' + name + '] required');
+                    }
+                }
             }
-            return ret;
         }
 
     }

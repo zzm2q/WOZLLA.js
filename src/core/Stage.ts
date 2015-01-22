@@ -24,6 +24,8 @@ module WOZLLA {
             this._viewRectTransform.anchorMode = RectTransform.ANCHOR_TOP | RectTransform.ANCHOR_LEFT;
             this._viewRectTransform.width = Director.getInstance().renderer.viewport.width;
             this._viewRectTransform.height = Director.getInstance().renderer.viewport.height;
+            this._viewRectTransform.px = 0;
+            this._viewRectTransform.py = 0;
             this.init();
         }
 

@@ -27,46 +27,47 @@ module WOZLLA.PureMVC {
             return arrayStore ? arrayStore.getAt(index) : null;
         }
 
+        getView(index:any, callback:(view:SimpleView) => void) {
+            this.loadItemView(index, callback);
+        }
+
         onStoreBind(store:Store, callback:Function) {
-            var loadedCount = 0;
+            var loadedCount;
             var arrayStore = <ArrayStore<Model>>store;
             Assert.isTrue(store instanceof ArrayStore, 'ListAdapter only support bind ArrayStore');
-            if(arrayStore.count === 0) {
-                callback && callback();
-                return;
-            }
-            arrayStore.each((model:Model, idx:number) => {
-                this.loadItemView(idx, ListView.DEFAUL_ITEM_MODEL_KEY, model, () => {
-                    loadedCount++;
-                    if(loadedCount === arrayStore.count) {
-                        callback && callback();
-                    }
-                })
-            });
 
             arrayStore.addListenerScope('add', this.onStoreAdd, this);
             arrayStore.addListenerScope('remove', this.onStoreRemove, this);
             arrayStore.addListenerScope('clear', this.onStoreClear, this);
             arrayStore.addListenerScope('sync', this.onStoreSync, this);
+
+            if(arrayStore.count === 0) {
+                callback && callback();
+            } else {
+                loadedCount = arrayStore.count;
+                arrayStore.each((model:Model, idx:number) => {
+                    this.getView(idx, (itemView:SimpleView) => {
+                        this.listView.addItemView(itemView);
+                        if (--loadedCount === 0) {
+                            callback && callback();
+                        }
+                    });
+                });
+            }
         }
 
         onStoreUnbind(store:Store) {
+            var arrayStore = this.arrayStore;
+            arrayStore.removeListenerScope('add', this.onStoreAdd, this);
+            arrayStore.removeListenerScope('remove', this.onStoreRemove, this);
+            arrayStore.removeListenerScope('clear', this.onStoreClear, this);
+            arrayStore.removeListenerScope('sync', this.onStoreSync, this);
             this.listView.clearItemViews();
         }
 
-        loadItemView(index:any, modelKey:string, model:Model, callback?:Function) {
-            var viewBuilder = new ViewBuilder();
-            viewBuilder.instantiateWithSrc(this.listView.itemViewSrc);
-            viewBuilder.addModel(modelKey, model);
-            viewBuilder.build((error:any, root:WOZLLA.GameObject) => {
-                var itemView = <SimpleView>root.getComponent(SimpleView);
-                this.listView.addItemViewAt(itemView, index);
-                callback && callback(itemView);
-            });
-        }
-
         onStoreAdd(e) {
-            this.loadItemView(e.data.index, ListView.DEFAUL_ITEM_MODEL_KEY, e.data.model, function(itemView) {
+            this.getView(e.data.index, (itemView) => {
+                this.listView.addItemView(itemView);
                 itemView.gameObject.loadAssets(() => itemView.gameObject.init());
             });
         }
@@ -81,6 +82,17 @@ module WOZLLA.PureMVC {
 
         onStoreSync(e) {
 
+        }
+
+        protected loadItemView(index:any, callback?:(view:SimpleView) => void) {
+            var viewBuilder = new ViewBuilder();
+            viewBuilder.setSync();
+            viewBuilder.instantiateWithSrc(this.listView.itemViewSrc);
+            viewBuilder.addModel(ListView.DEFAUL_ITEM_MODEL_KEY, this.getItem(index));
+            viewBuilder.build((error:any, root:WOZLLA.GameObject) => {
+                var itemView = <SimpleView>root.getComponent(SimpleView);
+                callback && callback(itemView);
+            });
         }
 
     }
