@@ -60,14 +60,6 @@ Version 0.5.1 (Released)
 
 ## RoadMap
 
-<<<<<<< HEAD
-Version 1.0 (see developing branch [v1.0](https://github.com/zzm2q/WOZLLA.js/tree/v1.0))
-* Auto Assets Management
-* Graphics: Primitives/Text
-* Animation: Sprite Animation/Skeletal Animation
-
-=======
->>>>>>> v1.0
 Version 1.5
 * Stability Optimization
 * Sound System
