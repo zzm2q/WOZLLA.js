@@ -1,9 +1,22 @@
 /// <reference path="../../libs/DragonBones.d.ts"/>
 /// <reference path="WSlot.ts"/>
 /// <reference path="WTextureAtlas.ts"/>
+/// <reference path="../../src/core/Scheduler.ts"/>
 /// <reference path="../../src/core/GameObject.ts"/>
 /// <reference path="../../src/component/renderer/SpriteRenderer.ts"/>
 module WOZLLA.DragonBones {
+
+    var clockSetup = false;
+
+    export function setupWorldClock() {
+        if(clockSetup) {
+            return;
+        }
+        clockSetup = true;
+        WOZLLA.Director.getInstance().scheduler.scheduleLoop(function() {
+            dragonBones.WorldClock.clock.advanceTime(1/60);
+        });
+    }
 
     export class WFactory extends dragonBones.BaseFactory {
         constructor() {

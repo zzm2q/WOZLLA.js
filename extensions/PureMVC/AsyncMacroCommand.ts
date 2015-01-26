@@ -19,7 +19,7 @@ module WOZLLA.PureMVC {
         }
 
         public executeSubCommand(CommandClass:Function, notification: puremvc.INotification, onComplete:Function):void {
-            var commandInstance:any =  new CommandClass();
+            var commandInstance:any =  new (<any>CommandClass)();
             commandInstance.initializeNotifier(this.multitonKey);
             if(commandInstance instanceof AsyncCommand) {
                 commandInstance.execute(notification, onComplete);

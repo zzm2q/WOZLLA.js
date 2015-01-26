@@ -8,6 +8,15 @@ module WOZLLA.jsonx {
 
     export class JSONXBuilder {
 
+        public static Factory:Function;
+
+        public static create():JSONXBuilder {
+            if(JSONXBuilder.Factory) {
+                return <JSONXBuilder>(new (<any>(JSONXBuilder.Factory))());
+            }
+            return new JSONXBuilder();
+        }
+
         private src;
         private data;
         private err;
@@ -16,6 +25,17 @@ module WOZLLA.jsonx {
         private doLoad:boolean = false;
         private doInit:boolean = false;
         private loadCallback:(root:WOZLLA.GameObject, done:Function) => void;
+        private async:boolean = true;
+
+        private uuidMap:any = {};
+
+        getByUUID(uuid) {
+            return this.uuidMap[uuid];
+        }
+
+        setSync():void {
+            this.async = false;
+        }
 
         instantiateWithSrc(src, callback:(root:WOZLLA.GameObject, done:Function) => void = emptyCallback) {
             this.src = src;
@@ -68,7 +88,7 @@ module WOZLLA.jsonx {
             });
         }
 
-        private _checkError(callback:(error:any, root:WOZLLA.GameObject) => void) {
+        protected _checkError(callback:(error:any, root:WOZLLA.GameObject) => void) {
             if(this.err) {
                 callback(this.err, null);
                 return true;
@@ -76,11 +96,13 @@ module WOZLLA.jsonx {
             return false;
         }
 
-        private _loadJSONData(callback:Function) {
+        protected _loadJSONData(callback:Function) {
             if(this.src && !this.data) {
                 WOZLLA.utils.Ajax.request({
-                    url: this.src,
+                    url: Director.getInstance().assetLoader.getBaseDir() + '/' + this.src,
                     contentType: 'json',
+                    async: this.async,
+                    withCredentials: true,
                     success: (data) => {
                         this.data = data;
                         callback && callback();
@@ -95,15 +117,17 @@ module WOZLLA.jsonx {
             }
         }
 
-        private _newGameObjectTree(callback:Function) {
+        protected _newGameObjectTree(callback:Function) {
             this._newGameObject(this.data.root, (root:WOZLLA.GameObject) => {
                 this.root = root;
                 callback && callback();
             });
         }
 
-        private _newGameObject(data:any, callback:(gameObj:WOZLLA.GameObject) => void) {
+        protected _newGameObject(data:any, callback:(gameObj:WOZLLA.GameObject) => void) {
             var gameObj = new WOZLLA.GameObject(data.rect);
+            gameObj._uuid = data.uuid;
+            this.uuidMap[data.uuid] = gameObj;
             gameObj.id = data.id;
             gameObj.name = data.name;
             gameObj.active = data.active;
@@ -114,7 +138,7 @@ module WOZLLA.jsonx {
             var components:Array<any> = data.components;
             if(components && components.length > 0) {
                 components.forEach((compData:any) => {
-                    gameObj.addComponent(this._newComponent(compData));
+                    gameObj.addComponent(this._newComponent(compData, gameObj));
                 });
             }
 
@@ -147,13 +171,15 @@ module WOZLLA.jsonx {
             });
         }
 
-        private _newReferenceObject(data:any, callback:(gameObj:WOZLLA.GameObject) => void) {
+        protected _newReferenceObject(data:any, callback:(gameObj:WOZLLA.GameObject) => void) {
             var builder = new JSONXBuilder();
             builder.instantiateWithSrc(data.reference).build((err:any, root:WOZLLA.GameObject) => {
                 if(err) {
                     this.err = err;
                 }
                 else if(root) {
+                    root._uuid = data.uuid;
+                    this.uuidMap[data.uuid] = root;
                     root.name = data.name;
                     root.id = data.id;
                     root.active = data.active;
@@ -165,22 +191,43 @@ module WOZLLA.jsonx {
             });
         }
 
-        private _newComponent(compData:any) {
+        protected _newComponent(compData:any, gameObj:WOZLLA.GameObject):WOZLLA.Component {
             var component = WOZLLA.Component.create(compData.name);
             var config = WOZLLA.Component.getConfig(compData.name);
-            config.properties.forEach((prop) => {
-                var value = compData.properties[prop.name];
-                component[prop.name] =  typeof value === 'undefined' ? prop.defaultValue : value;
-            });
+            component._uuid = compData.uuid;
+            this.uuidMap[compData.uuid] = component;
+            component.gameObject = gameObj;
+            this._applyComponentProperties(component, config.properties, compData);
             return component;
         }
 
-        private _loadAssets(callback:Function) {
-            // TODO how to load assets? the key.
-            callback && callback();
+        protected _applyComponentProperties(component, properties:any, compData:any) {
+            if(properties && properties.length > 0) {
+                properties.forEach((prop) => {
+                    if(prop.group) {
+                        this._applyComponentProperties(component, prop.properties, compData);
+                    } else if(prop.extend) {
+                        var config = Component.getConfig(prop.extend);
+                        if(config) {
+                            this._applyComponentProperties(component, config.properties, compData);
+                        }
+                    } else {
+                        var value = compData.properties[prop.name];
+                        value = value == void 0 ? prop.defaultValue : value;
+                        if (prop.convert && value) {
+                            value = prop.convert(value);
+                        }
+                        component[prop.name] = value;
+                    }
+                });
+            }
         }
 
-        private _init() {
+        protected _loadAssets(callback:Function) {
+            this.root.loadAssets(callback);
+        }
+
+        protected _init() {
             this.root.init();
         }
 

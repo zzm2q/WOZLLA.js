@@ -15,10 +15,6 @@ module WOZLLA.assets {
         get glTexture() { return this._glTexture; }
         _glTexture:WOZLLA.renderer.ITexture;
 
-        constructor(src:string) {
-            super(src);
-        }
-
         _generateTexture(image:HTMLImageElement):void {
             var renderer:WOZLLA.renderer.IRenderer = Director.getInstance().renderer;
             if(!renderer) {

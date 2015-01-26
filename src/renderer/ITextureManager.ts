@@ -6,6 +6,7 @@ module WOZLLA.renderer {
      */
     export interface ITextureManager {
         generateTexture(descriptor:ITextureDescriptor):ITexture;
+        updateTexture(texture:ITexture):void;
         deleteTexture(texture:ITexture):void;
         getTexture(id):ITexture;
         clear():void;

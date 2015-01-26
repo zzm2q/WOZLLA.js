@@ -22,31 +22,37 @@ module WOZLLA {
         }
 
         private _scheduleCount = 0;
-        private _schedules = {};
-
-        private _runScheduleCount = 0;
+        private _lastSchedules;
+        private _schedules:any = {};
 
         runSchedule() {
-            var scheduleId, scheduleItem;
-            this._runScheduleCount = 0;
-            for(scheduleId in this._schedules) {
-                scheduleItem = this._schedules[scheduleId];
+            var scheduleId, scheduleItem, schedules;
+            var markScheduleCount = this._scheduleCount;
+            if(this._lastSchedules) {
+                for(scheduleId in this._schedules) {
+                    this._lastSchedules[scheduleId] = this._schedules[scheduleId];
+                }
+            } else {
+                this._lastSchedules = this._schedules;
+            }
+            this._schedules = {};
+            schedules = this._lastSchedules;
+            for(scheduleId in schedules) {
+                scheduleItem = schedules[scheduleId];
                 if(scheduleItem.isFrame && !scheduleItem.paused) {
                     scheduleItem.frame --;
                     if(scheduleItem.frame < 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
-
                 else if(scheduleItem.isTime && !scheduleItem.paused) {
                     scheduleItem.time -= Time.delta;
                     if(scheduleItem.time < 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
-
                 else if(scheduleItem.isInterval && !scheduleItem.paused) {
                     scheduleItem.time -= Time.delta;
                     if(scheduleItem.time < 0) {
@@ -54,11 +60,12 @@ module WOZLLA {
                         scheduleItem.time += scheduleItem.intervalTime;
                     }
                 }
-
                 else if(scheduleItem.isLoop && !scheduleItem.paused) {
                     scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                 }
-                this._runScheduleCount ++;
+            }
+            if(markScheduleCount < this._scheduleCount) {
+                this.runSchedule();
             }
         }
 
@@ -76,7 +83,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleLoop(task, args) {
+        scheduleLoop(task, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task : task,
@@ -93,9 +100,8 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleFrame(task, frame, args) {
+        scheduleFrame(task, frame=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
-            frame = frame || 0;
             this._schedules[scheduleId] = {
                 task : task,
                 frame : frame,
@@ -112,7 +118,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleInterval(task, time, args) {
+        scheduleInterval(task, time=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task : task,
@@ -131,7 +137,7 @@ module WOZLLA {
          * @param args
          * @returns {string} schedule id
          */
-        scheduleTime(task, time, args) {
+        scheduleTime(task, time=0, args?) {
             var scheduleId = 'Schedule_' + (this._scheduleCount++);
             time = time || 0;
             this._schedules[scheduleId] = {

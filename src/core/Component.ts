@@ -13,9 +13,9 @@ module WOZLLA {
         /**
          * get the GameObject of this component belongs to.
          * @property {WOZLLA.GameObject} gameObject
-         * @readonly
          */
         get gameObject():GameObject { return this._gameObject; }
+        set gameObject(value:GameObject) { this._gameObject = value; }
 
         /**
          *  get transform of the gameObject of this component
@@ -24,6 +24,7 @@ module WOZLLA {
         get transform():Transform { return this._gameObject.transform; }
 
         _gameObject:GameObject;
+        _uuid:string;
 
         /**
          * init this component
@@ -43,7 +44,18 @@ module WOZLLA {
             return [];
         }
 
+        private static ctorMap:any = {};
         private static configMap:any = {};
+
+        public static getType(name:string) {
+            var ret = this.ctorMap[name]
+            Assert.isNotUndefined(ret, 'Can\'t found component: ' + name);
+            return ret;
+        }
+
+        public static getName(Type:Function) {
+            return (<any>Type).componentName;
+        }
 
         /**
          * register an component class and it's configuration
@@ -56,7 +68,16 @@ module WOZLLA {
             Assert.isObject(config);
             Assert.isString(config.name);
             Assert.isUndefined(Component.configMap[config.name]);
-            Component.configMap[config.name] = ctor;
+            Component.ctorMap[config.name] = ctor;
+            Component.configMap[config.name] = config;
+            (<any>ctor).componentName = config.name;
+        }
+
+        public static unregister(name:string) {
+            Assert.isString(name);
+            Assert.isNotUndefined(Component.configMap[name]);
+            delete Component.ctorMap[name];
+            delete Component.configMap[name];
         }
 
         /**
@@ -66,14 +87,17 @@ module WOZLLA {
          */
         public static create(name:string):WOZLLA.Component {
             Assert.isString(name);
-            var ctor:Function = Component.configMap[name];
+            var ctor:Function = Component.ctorMap[name];
             Assert.isFunction(ctor);
             return <WOZLLA.Component>new (<any>ctor)();
         }
 
-        public static getConfig(name:string):any {
+        public static getConfig(name:any):any {
             var config:any;
-            Assert.isString(name);
+            Assert.isNotUndefined(name);
+            if(typeof name === 'function') {
+                name = Component.getName(name);
+            }
             config = Component.configMap[name];
             Assert.isNotUndefined(config);
             return config;

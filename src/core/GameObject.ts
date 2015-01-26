@@ -94,6 +94,12 @@ module WOZLLA {
         get children():GameObject[] { return this._children.slice(0); }
 
         /**
+         * get raw children
+         * @returns {WOZLLA.GameObject[]}
+         */
+        get rawChildren():GameObject[] { return this._children; }
+
+        /**
          * get child count
          * @property {number} childCount
          * @member WOZLLA.GameObject
@@ -193,6 +199,7 @@ module WOZLLA {
          */
         get mask():Mask { return this._mask; }
 
+        _uuid:string;
         _id:string;
         _name;
         _active:boolean = true;
@@ -257,14 +264,19 @@ module WOZLLA {
             if(child._parent) {
                 child.removeMe();
             }
-            child.dispatchEvent(new CoreEvent('beforeadd', true));
+            child.dispatchEvent(new CoreEvent('beforeadd', false, {
+                parent: this
+            }));
             this._children.push(child);
             if(sort) {
                 this._children.sort(comparator);
             }
             child._parent = this;
             child._transform.dirty = true;
-            child.dispatchEvent(new CoreEvent('add', true));
+            child.dispatchEvent(new CoreEvent('add', false));
+            this.dispatchEvent(new CoreEvent('childadd', false, {
+                child: child
+            }));
             return true;
         }
 
@@ -276,10 +288,15 @@ module WOZLLA {
         removeChild(child:GameObject):boolean {
             var idx = this._children.indexOf(child);
             if(idx !== -1) {
-                child.dispatchEvent(new CoreEvent('beforeremove', true, null, false));
+                child.dispatchEvent(new CoreEvent('beforeremove', false));
                 this._children.splice(idx, 1);
                 child._parent = null;
-                child.dispatchEvent(new CoreEvent('remove', true, null, false));
+                child.dispatchEvent(new CoreEvent('remove', false, {
+                    parent: this
+                }));
+                this.dispatchEvent(new CoreEvent('childremove', false, {
+                    child: child
+                }));
                 return true;
             }
             return false;
@@ -401,6 +418,9 @@ module WOZLLA {
          */
         hasComponent(Type:Function):boolean {
             var comp, i, len;
+            if(Type === RectTransform) {
+                return !!this._rectTransform;
+            }
             if(this._components.length <= 0) {
                 return false;
             }
@@ -443,9 +463,7 @@ module WOZLLA {
             if(this._components.indexOf(comp) !== -1) {
                 return false;
             }
-            if(!this.checkComponentDependency(comp)) {
-                throw new Error('Can\'t not add, because of dependency');
-            }
+            this.checkComponentDependency(comp);
             if(comp._gameObject) {
                 comp._gameObject.removeComponent(comp);
             }
@@ -475,9 +493,7 @@ module WOZLLA {
                 for(i=0,len=this._components.length; i<len; i++) {
                     otherComp = this._components[i];
                     if(otherComp !== comp) {
-                        if(this.checkComponentDependency(otherComp)) {
-                            throw new Error('Can\'t not remove, because of dependency');
-                        }
+                        this.checkComponentDependency(otherComp, true);
                     }
                 }
                 this._components.splice(idx, 1);
@@ -555,7 +571,7 @@ module WOZLLA {
          * @param parentTransform
          * @param flags
          */
-        visit(renderer:WOZLLA.renderer.IRenderer, parentTransform:Transform, flags:number):void {
+        visit(renderer:WOZLLA.renderer.IRenderer, parentTransform:Transform, flags:number):number {
             var i, len;
             if(!this._active || !this._initialized || this._destroyed) {
                 if((flags & GameObject.MASK_TRANSFORM_DIRTY) === GameObject.MASK_TRANSFORM_DIRTY) {
@@ -581,6 +597,8 @@ module WOZLLA {
             for(i=0,len=this._children.length; i<len; i++) {
                 this._children[i].visit(renderer, this._transform, flags);
             }
+
+            return flags;
         }
 
         /**
@@ -660,17 +678,103 @@ module WOZLLA {
             }
         }
 
-        protected checkComponentDependency(comp:Component):boolean {
-            var Type:Function;
-            var requires = comp.listRequiredComponents();
-            var ret:boolean = true;
-            for(var i=0, len=requires.length; i<len; i++) {
-                Type = requires[i];
-                ret = ret && this.hasComponent(Type);
+
+        static QUERY_FULL_REGEX = /((.*?):(.*?))\[(.*?)\]$/;
+        static QUERY_COMP_REGEX = /((.*?):(.*?))$/;
+        static QUERY_OBJ_ATTR_REGEX = /(.*?)\[(.*?)\]$/;
+
+        query(expr:string, record?:QueryRecord):any {
+            var result,
+                compExpr,
+                objExpr,
+                compName,
+                attrName;
+
+            var objArr;
+
+            var hasAttr = expr.indexOf('[') !== -1 && expr.indexOf(']') !== -1;
+            var hasComp = expr.indexOf(':') !== -1;
+
+            if(hasComp && hasAttr) {
+                result = GameObject.QUERY_FULL_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+                attrName = result[4];
+            } else if(hasComp && !hasAttr) {
+                result = GameObject.QUERY_COMP_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+            } else if(!hasComp && hasAttr) {
+                result = GameObject.QUERY_OBJ_ATTR_REGEX.exec(expr);
+                objExpr = result[1];
+                attrName = result[2];
+            } else {
+                objExpr = expr;
             }
-            return ret;
+            if(record) {
+                record.compExpr = compExpr;
+                record.objExpr = objExpr;
+                record.compName = compName;
+                record.attrName = attrName;
+            }
+
+            if(!objExpr) {
+                result = this;
+            } else {
+                result = this;
+                objArr = objExpr.split('/');
+                for(var i=0,len=objArr.length; i<len; i++) {
+                    if(!objArr[i]) {
+                        break;
+                    }
+                    result = result.getChild(objArr[i]);
+                    if(!result) {
+                        break;
+                    }
+                }
+            }
+
+            if(result && compName) {
+                result = result.getComponent(Component.getType(compName));
+            }
+
+            if(result && record) {
+                record.target = result;
+            }
+
+            if(result && attrName) {
+                result = result[attrName];
+            }
+            return result;
         }
 
+        protected checkComponentDependency(comp:Component, isRemove:boolean=false) {
+            var Type:Function;
+            var requires = comp.listRequiredComponents();
+            if(!requires || requires.length === 0) return;
+            for(var i=0, len=requires.length; i<len; i++) {
+                Type = requires[i];
+                if(!this.hasComponent(Type)) {
+                    if(isRemove) {
+                        throw new Error('Can NOT remove: Component[' + Component.getName(comp['constructor']) + '] depend on it');
+                    } else {
+                        var name = Type === RectTransform ? 'RectTransform' : Component.getName(Type);
+                        throw new Error('Can NOT add: Component[' + name + '] required');
+                    }
+                }
+            }
+        }
+
+    }
+
+    export class QueryRecord {
+        compExpr = null;
+        objExpr = null;
+        compName = null;
+        attrName = null;
+        target = null;
     }
 
 }

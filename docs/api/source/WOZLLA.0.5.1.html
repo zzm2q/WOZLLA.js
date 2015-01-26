@@ -4280,6 +4280,65 @@ var WOZLLA;
 (function (WOZLLA) {
     var assets;
     (function (assets) {
+        var proxy;
+        (function (proxy) {
+            var AssetProxy = (function () {
+                function AssetProxy(proxyTarget) {
+                    this.dirty = true;
+                    this.proxyTarget = proxyTarget;
+                }
+                AssetProxy.prototype.setDirty = function () {
+                    this.dirty = true;
+                };
+                AssetProxy.prototype.loadAsset = function (callback) {
+                    if (this.checkDirty()) {
+                        this.asset &amp;&amp; this.asset.release();
+                        this.doLoad(callback);
+                    }
+                };
+                AssetProxy.prototype.checkDirty = function () {
+                    return this.dirty;
+                };
+                AssetProxy.prototype.doLoad = function (callback) {
+                    callback();
+                };
+                return AssetProxy;
+            })();
+            proxy.AssetProxy = AssetProxy;
+        })(proxy = assets.proxy || (assets.proxy = {}));
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
+        var proxy;
+        (function (proxy) {
+            var SpriteAtlasProxy = (function (_super) {
+                __extends(SpriteAtlasProxy, _super);
+                function SpriteAtlasProxy() {
+                    _super.apply(this, arguments);
+                }
+                SpriteAtlasProxy.prototype.checkDirty = function () {
+                    if (!this.dirty) {
+                        return false;
+                    }
+                    if (this._spriteAtlasSrc !== this.proxyTarget.getSpriteAltasSrc()) {
+                    }
+                };
+                SpriteAtlasProxy.prototype.doLoad = function (callback) {
+                    callback();
+                };
+                return SpriteAtlasProxy;
+            })(proxy.AssetProxy);
+            proxy.SpriteAtlasProxy = SpriteAtlasProxy;
+        })(proxy = assets.proxy || (assets.proxy = {}));
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
 <span id='WOZLLA-assets-Sprite'>        /**
 </span>         * an sprite is a part of a sprite atlas
          * @class WOZLLA.assets.Sprite
@@ -5495,7 +5554,43 @@ var WOZLLA;
         component.RectMask = RectMask;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var utils;
+    (function (utils) {
+        var URL = (function () {
+            function URL() {
+            }
+            URL.parse = function (str) {
+                var idx = str.indexOf(&#39;?&#39;);
+                if (idx === -1) {
+                    return {
+                        url: str,
+                        params: {}
+                    };
+                }
+                var search = str.substr(idx + 1);
+                var params = {};
+                var paramStrArr = search.split(&#39;&amp;&#39;);
+                paramStrArr.forEach(function (paramStr) {
+                    if (!paramStr)
+                        return;
+                    var pair = paramStr.split(&#39;=&#39;);
+                    params[pair[0]] = pair[1];
+                });
+                return {
+                    url: str.substr(0, idx),
+                    params: params
+                };
+            };
+            return URL;
+        })();
+        utils.URL = URL;
+    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
+})(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;QuadRenderer.ts&quot;/&gt;
+/// &lt;reference path=&quot;../../utils/URL.ts&quot;/&gt;
+/// &lt;reference path=&quot;../../assets/proxy/SpriteAtlasProxy.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../assets/Sprite.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../assets/SpriteAtlas.ts&quot;/&gt;
 var WOZLLA;
@@ -5508,7 +5603,8 @@ var WOZLLA;
         var SpriteRenderer = (function (_super) {
             __extends(SpriteRenderer, _super);
             function SpriteRenderer() {
-                _super.apply(this, arguments);
+                _super.call(this);
+                this._spriteProxy = new WOZLLA.assets.proxy.SpriteProxy(this);
             }
             Object.defineProperty(SpriteRenderer.prototype, &quot;color&quot;, {
                 get: function () {
@@ -5591,6 +5687,40 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
+            Object.defineProperty(SpriteRenderer.prototype, &quot;spriteAtlasSrc&quot;, {
+                get: function () {
+                    return this._spriteSrc;
+                },
+                set: function (value) {
+                    this._spriteSrc = value;
+                    this._spriteProxy.setDirty();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SpriteRenderer.prototype, &quot;spriteName&quot;, {
+                get: function () {
+                    return this._spriteName;
+                },
+                set: function (value) {
+                    this._spriteName = value;
+                    this._spriteProxy.setDirty();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            SpriteRenderer.prototype.getSpriteAtlasSrc = function () {
+                return this._spriteSrc;
+            };
+            SpriteRenderer.prototype.getSpriteName = function () {
+                return this._spriteName;
+            };
+            SpriteRenderer.prototype.onSpriteLoaded = function (sprite) {
+                this._sprite = sprite;
+            };
+            SpriteRenderer.prototype.loadAssets = function (callback) {
+                this._spriteProxy.loadAsset(callback);
+            };
             return SpriteRenderer;
         })(component.QuadRenderer);
         component.SpriteRenderer = SpriteRenderer;
@@ -5599,6 +5729,9 @@ var WOZLLA;
             properties: [{
                 name: &#39;color&#39;,
                 type: &#39;int&#39;
+            }, {
+                name: &#39;spriteSrc&#39;,
+                type: &#39;string&#39;
             }]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));

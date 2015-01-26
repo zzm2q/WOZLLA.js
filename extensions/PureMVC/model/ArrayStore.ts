@@ -1,5 +1,4 @@
-///<reference path='../../libs/puremvc-typescript-multicore-1.1.d.ts'/>
-///<reference path='../../libs/WOZLLA.d.ts'/>
+///<reference path='../../../libs/puremvc-typescript-multicore-1.1.d.ts'/>
 ///<reference path='Model.ts'/>
 ///<reference path='Store.ts'/>
 module WOZLLA.PureMVC {
@@ -11,24 +10,21 @@ module WOZLLA.PureMVC {
         get count():number { return this.list.length; }
 
         add(model:T, silent:boolean=false) {
-            this.list.push(model);
-            if(!silent) {
-                this.dispatchEvent(new WOZLLA.event.Event('add', true, model));
-            }
+            this.addAt(model, this.list.length, silent);
         }
 
         addAt(model:T, index:number, silent:boolean=false) {
             this.list.splice(index, 0, model);
             if(!silent) {
-                this.dispatchEvent(new WOZLLA.event.Event('add', true, model));
+                this.dispatchEvent(new WOZLLA.event.Event('add', true,
+                    new ArrayStoreEventData(model, index)));
             }
         }
 
         remove(model:T, silent:boolean=false) {
             var index = this.indexOf(model);
-            this.list.splice(index, 1);
-            if(!silent) {
-                this.dispatchEvent(new WOZLLA.event.Event('remove', true, model));
+            if(index !== -1) {
+                this.removeAt(index, silent);
             }
         }
 
@@ -36,7 +32,8 @@ module WOZLLA.PureMVC {
             var model = this.list[index];
             this.list.splice(index, 1);
             if(!silent) {
-                this.dispatchEvent(new WOZLLA.event.Event('remove', true, model));
+                this.dispatchEvent(new WOZLLA.event.Event('remove', true,
+                    new ArrayStoreEventData(model, index)));
             }
         }
 
@@ -85,6 +82,12 @@ module WOZLLA.PureMVC {
             }
         }
 
+    }
+
+    export class ArrayStoreEventData {
+        constructor(public model:Model, public index:number) {
+
+        }
     }
 
 }

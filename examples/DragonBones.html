@@ -10,29 +10,18 @@
     var director = new WOZLLA.Director(document.getElementById('canvas'));
     director.start();
 
-    WOZLLA.utils.Ajax.request({
-        url: 'resources/skeleton2.json',
-        contentType: 'json',
-        success: function(skeletonData) {
-            director.assetLoader.load('resources/texture2.json', WOZLLA.DragonBones.WTextureAtlas, function() {
-                var wTextureAtlas = director.assetLoader.getAsset('resources/texture2.json');
-                var factory = new WOZLLA.DragonBones.WFactory();
-                factory.addSkeletonData(dragonBones.DataParser.parseDragonBonesData(skeletonData), skeletonData.name);
-                factory.addTextureAtlas(wTextureAtlas, wTextureAtlas.name);
+    var gameObj = new WOZLLA.GameObject();
+    var skeletonRenderer = new WOZLLA.DragonBones.SkeletonRenderer();
+    skeletonRenderer.skeletonSrc = 'resources/skeleton2.json';
+    skeletonRenderer.textureSrc = 'resources/texture2.json';
+    skeletonRenderer.armatureName = 'dragonBoy';
+    gameObj.addComponent(skeletonRenderer);
 
-                var armature = factory.buildArmature('dragonBoy');
-                var container = armature.getDisplay();
-                container.transform.setPosition(300, 300);
-                container.transform.setScale(0.5, 0.5);
-                armature.animation.gotoAndPlay('stand');
-                dragonBones.WorldClock.clock.add(armature);
-
-                director.stage.addChild(armature.getDisplay());
-                director.scheduler.scheduleLoop(function() {
-                    dragonBones.WorldClock.clock.advanceTime(1/60);
-                });
-            });
-        }
+    gameObj.loadAssets(function() {
+        gameObj.init();
+        gameObj.transform.setPosition(480, 320);
+        skeletonRenderer.armature.animation.gotoAndPlay('stand');
+        director.stage.addChild(gameObj);
     });
 </script>
 </body>

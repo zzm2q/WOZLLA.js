@@ -63,7 +63,8 @@ module WOZLLA.utils {
                 responseType: 'text/plain',
                 timeout: 30000,
                 success: empty,
-                error: empty
+                error: empty,
+                withCredentials: false
             });
 
             xhr = new XMLHttpRequest();
@@ -80,6 +81,7 @@ module WOZLLA.utils {
                 }
             };
             xhr.open(options.method, options.url, options.async);
+            xhr.withCredentials = options.withCredentials;
             timeoutId = setTimeout(function() {
                 xhr.onreadystatechange = empty;
                 xhr.abort();

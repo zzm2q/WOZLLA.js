@@ -1,5 +1,5 @@
-///<reference path='../../libs/puremvc-typescript-multicore-1.1.d.ts'/>
-///<reference path='../../libs/WOZLLA.d.ts'/>
+///<reference path='../../../libs/puremvc-typescript-multicore-1.1.d.ts'/>
+///<reference path='../../../src/event/EventDispatcher.ts' />
 module WOZLLA.PureMVC {
 
     var modelIdGen = 0;
@@ -15,6 +15,7 @@ module WOZLLA.PureMVC {
         protected definedField:any = {};
 
         constructor() {
+            super();
             this.initFields();
         }
 
@@ -24,6 +25,12 @@ module WOZLLA.PureMVC {
 
         defineField(field:string) {
             this.definedField[field] = true;
+        }
+
+        defineFields(array:Array<string>) {
+            array.forEach((field:string) => {
+                this.defineField(field);
+            });
         }
 
         get(field:string):any {
@@ -39,6 +46,12 @@ module WOZLLA.PureMVC {
             if(!silent) {
                 this.dispatchEvent(new WOZLLA.event.Event(
                     'fieldchanged', true, new FieldChangeEventData(field, value, oldValue)));
+            }
+        }
+
+        setAll(data:any, silent:boolean=false) {
+            for(var field in data) {
+                this.set(field, data[field], silent);
             }
         }
 

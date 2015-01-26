@@ -21,12 +21,18 @@ module WOZLLA.assets {
          */
         get src():string { return this._src; }
 
+        get fullPath():string {
+            return this._baseDir + this._src;
+        }
+
         private _src:string;
+        private _baseDir:string;
         private _refCount = 0;
 
-        constructor(src:string) {
+        constructor(src:string, baseDir:string='') {
             super();
             this._src = src;
+            this._baseDir = baseDir;
         }
 
         /**
