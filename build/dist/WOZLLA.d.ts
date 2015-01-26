@@ -201,9 +201,11 @@ declare module WOZLLA.assets {
          * @readonly
          */
         src: string;
+        fullPath: string;
         private _src;
+        private _baseDir;
         private _refCount;
-        constructor(src: string);
+        constructor(src: string, baseDir?: string);
         /**
          * retain this asset
          */
@@ -248,6 +250,9 @@ declare module WOZLLA.assets {
         static getInstance(): AssetLoader;
         _loadedAssets: {};
         _loadingUnits: {};
+        _baseDir: string;
+        getBaseDir(): string;
+        setBaseDir(baseDir: string): void;
         /**
          * get an asset by src
          * @param src
@@ -519,6 +524,7 @@ declare module WOZLLA {
      * @class WOZLLA.RectTransform
      */
     class RectTransform extends Transform {
+        static getMode(name: any): number;
         /**
          * vertical anchor mode
          * @property {number} ANCHOR_TOP
@@ -674,6 +680,7 @@ declare module WOZLLA {
          */
         transform: Transform;
         _gameObject: GameObject;
+        _uuid: string;
         /**
          * init this component
          */
@@ -788,6 +795,11 @@ declare module WOZLLA {
          */
         children: GameObject[];
         /**
+         * get raw children
+         * @returns {WOZLLA.GameObject[]}
+         */
+        rawChildren: GameObject[];
+        /**
          * get child count
          * @property {number} childCount
          * @member WOZLLA.GameObject
@@ -864,6 +876,7 @@ declare module WOZLLA {
          * @readonly
          */
         mask: Mask;
+        _uuid: string;
         _id: string;
         _name: any;
         _active: boolean;
@@ -995,7 +1008,7 @@ declare module WOZLLA {
          * @param parentTransform
          * @param flags
          */
-        visit(renderer: renderer.IRenderer, parentTransform: Transform, flags: number): void;
+        visit(renderer: renderer.IRenderer, parentTransform: Transform, flags: number): number;
         /**
          * render this game object
          * @param renderer
@@ -1021,8 +1034,15 @@ declare module WOZLLA {
         static QUERY_FULL_REGEX: RegExp;
         static QUERY_COMP_REGEX: RegExp;
         static QUERY_OBJ_ATTR_REGEX: RegExp;
-        query(expr: string, record?: any): any;
-        protected checkComponentDependency(comp: Component): boolean;
+        query(expr: string, record?: QueryRecord): any;
+        protected checkComponentDependency(comp: Component, isRemove?: boolean): void;
+    }
+    class QueryRecord {
+        compExpr: any;
+        objExpr: any;
+        compName: any;
+        attrName: any;
+        target: any;
     }
 }
 declare module WOZLLA {
@@ -1083,8 +1103,8 @@ declare module WOZLLA {
          */
         static getInstance(): any;
         private _scheduleCount;
+        private _lastSchedules;
         private _schedules;
-        private _runScheduleCount;
         runSchedule(): void;
         /**
          * remove the specify schedule by id
@@ -1518,7 +1538,6 @@ declare module WOZLLA.assets {
     class GLTextureAsset extends Asset {
         glTexture: renderer.ITexture;
         _glTexture: renderer.ITexture;
-        constructor(src: string);
         _generateTexture(image: HTMLImageElement): void;
         _generatePVRTexture(pvrSource: any): void;
     }
@@ -1690,12 +1709,6 @@ declare module WOZLLA.assets {
         _spriteData: any;
         _spriteCache: any;
         _frameLengthCache: number;
-        /**
-         * new a SpriteAtlas
-         * @method constructor
-         * @param src
-         */
-        constructor(src: string);
         getFrameLength(): number;
         /**
          * get sprite by name
@@ -2054,6 +2067,8 @@ declare module WOZLLA.component {
         static array2rect(arr: number[]): math.Rectangle;
         static array2circle(arr: number[]): math.Circle;
         static json2TextStyle(json: any): TextStyle;
+        static array2Padding(arr: number[]): layout.Padding;
+        static array2Margin(arr: number[]): layout.Margin;
     }
 }
 declare module WOZLLA.component {
@@ -2214,6 +2229,8 @@ declare module WOZLLA {
 }
 declare module WOZLLA.jsonx {
     class JSONXBuilder {
+        static Factory: Function;
+        static create(): JSONXBuilder;
         private src;
         private data;
         private err;
@@ -2222,6 +2239,10 @@ declare module WOZLLA.jsonx {
         private doLoad;
         private doInit;
         private loadCallback;
+        private async;
+        private uuidMap;
+        getByUUID(uuid: any): any;
+        setSync(): void;
         instantiateWithSrc(src: any, callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
         instantiateWithJSON(data: any, callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
         load(callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
@@ -2236,6 +2257,82 @@ declare module WOZLLA.jsonx {
         protected _applyComponentProperties(component: any, properties: any, compData: any): void;
         protected _loadAssets(callback: Function): void;
         protected _init(): void;
+    }
+}
+declare module WOZLLA.layout {
+    class LayoutBase extends Component {
+        private _layoutSchedule;
+        init(): void;
+        destroy(): void;
+        doLayout(): void;
+        requestLayout(): void;
+        cancelLayout(): void;
+        protected onChildAdd(e: any): void;
+        protected onChildRemove(e: any): void;
+    }
+}
+declare module WOZLLA.math {
+    /**
+     * @class WOZLLA.math.Size
+     * a util class contains width and height properties
+     */
+    class Size {
+        width: number;
+        height: number;
+        /**
+         * @method constructor
+         * create a new instance of Size
+         * @member WOZLLA.math.Size
+         * @param {number} width
+         * @param {number} height
+         */
+        constructor(width: number, height: number);
+        /**
+         * get simple description of this object
+         * @returns {string}
+         */
+        toString(): string;
+    }
+}
+declare module WOZLLA.layout {
+    class Grid extends LayoutBase {
+        listRequiredComponents(): Function[];
+        padding: Padding;
+        itemMargin: Margin;
+        _padding: Padding;
+        _itemMargin: Margin;
+        doLayout(): void;
+        protected measureChildSize(child: GameObject, idx: number, size: math.Size): void;
+    }
+}
+declare module WOZLLA.layout {
+    class Margin {
+        top: number;
+        left: number;
+        bottom: number;
+        right: number;
+        constructor(top: number, left: number, bottom: number, right: number);
+        equals(padding: Padding): boolean;
+    }
+}
+declare module WOZLLA.layout {
+    class Padding {
+        top: number;
+        left: number;
+        bottom: number;
+        right: number;
+        constructor(top: number, left: number, bottom: number, right: number);
+        equals(padding: Padding): boolean;
+    }
+}
+declare module WOZLLA.layout {
+    class VBox extends LayoutBase {
+        padding: Padding;
+        itemMargin: number;
+        _padding: Padding;
+        _itemMargin: number;
+        doLayout(): void;
+        protected measureChildHeight(child: GameObject, idx: number): number;
     }
 }
 declare module WOZLLA.math {
@@ -2266,29 +2363,6 @@ declare module WOZLLA.math {
     module MathUtils {
         function rectIntersect(a: any, b: any): boolean;
         function rectIntersect2(ax: any, ay: any, aw: any, ah: any, bx: any, by: any, bw: any, bh: any): boolean;
-    }
-}
-declare module WOZLLA.math {
-    /**
-     * @class WOZLLA.math.Size
-     * a util class contains width and height properties
-     */
-    class Size {
-        width: number;
-        height: number;
-        /**
-         * @method constructor
-         * create a new instance of Size
-         * @member WOZLLA.math.Size
-         * @param {number} width
-         * @param {number} height
-         */
-        constructor(width: number, height: number);
-        /**
-         * get simple description of this object
-         * @returns {string}
-         */
-        toString(): string;
     }
 }
 declare module WOZLLA.renderer {

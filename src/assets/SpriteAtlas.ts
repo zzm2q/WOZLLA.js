@@ -62,15 +62,6 @@ module WOZLLA.assets {
 
         _frameLengthCache:number;
 
-        /**
-         * new a SpriteAtlas
-         * @method constructor
-         * @param src
-         */
-        constructor(src:string) {
-            super(src);
-        }
-
         getFrameLength():number {
             var frames;
             if(!this._spriteData) {
@@ -132,8 +123,8 @@ module WOZLLA.assets {
          * @param onError
          */
         load(onSuccess:()=>any, onError:(error)=>any) {
-            if(isImageURL(this.src)) {
-                this._imageSrc = this.src;
+            if(isImageURL(this.fullPath)) {
+                this._imageSrc = this.fullPath;
                 this._loadImage((error, image) => {
                     if(error) {
                         onError && onError(error);
@@ -150,7 +141,7 @@ module WOZLLA.assets {
                     }
                 });
             } else {
-                this._metaSrc = this.src;
+                this._metaSrc = this.fullPath;
                 this._loadSpriteAtlas((error, image, spriteData) => {
                     if(error) {
                         onError && onError(error);

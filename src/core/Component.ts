@@ -24,6 +24,7 @@ module WOZLLA {
         get transform():Transform { return this._gameObject.transform; }
 
         _gameObject:GameObject;
+        _uuid:string;
 
         /**
          * init this component

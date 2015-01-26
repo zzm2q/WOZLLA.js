@@ -26,7 +26,7 @@ module WOZLLA.assets {
 
         load(onSuccess:()=>any, onError:(error)=>any) {
             WOZLLA.utils.Ajax.request({
-                url: this.src,
+                url: this.fullPath,
                 contentType: 'json',
                 success: (data) => {
                     this._data = data;

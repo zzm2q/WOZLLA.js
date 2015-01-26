@@ -8,6 +8,15 @@ module WOZLLA.jsonx {
 
     export class JSONXBuilder {
 
+        public static Factory:Function;
+
+        public static create():JSONXBuilder {
+            if(JSONXBuilder.Factory) {
+                return <JSONXBuilder>(new (<any>(JSONXBuilder.Factory))());
+            }
+            return new JSONXBuilder();
+        }
+
         private src;
         private data;
         private err;
@@ -17,6 +26,12 @@ module WOZLLA.jsonx {
         private doInit:boolean = false;
         private loadCallback:(root:WOZLLA.GameObject, done:Function) => void;
         private async:boolean = true;
+
+        private uuidMap:any = {};
+
+        getByUUID(uuid) {
+            return this.uuidMap[uuid];
+        }
 
         setSync():void {
             this.async = false;
@@ -84,9 +99,10 @@ module WOZLLA.jsonx {
         protected _loadJSONData(callback:Function) {
             if(this.src && !this.data) {
                 WOZLLA.utils.Ajax.request({
-                    url: this.src,
+                    url: Director.getInstance().assetLoader.getBaseDir() + '/' + this.src,
                     contentType: 'json',
                     async: this.async,
+                    withCredentials: true,
                     success: (data) => {
                         this.data = data;
                         callback && callback();
@@ -110,6 +126,8 @@ module WOZLLA.jsonx {
 
         protected _newGameObject(data:any, callback:(gameObj:WOZLLA.GameObject) => void) {
             var gameObj = new WOZLLA.GameObject(data.rect);
+            gameObj._uuid = data.uuid;
+            this.uuidMap[data.uuid] = gameObj;
             gameObj.id = data.id;
             gameObj.name = data.name;
             gameObj.active = data.active;
@@ -160,6 +178,8 @@ module WOZLLA.jsonx {
                     this.err = err;
                 }
                 else if(root) {
+                    root._uuid = data.uuid;
+                    this.uuidMap[data.uuid] = root;
                     root.name = data.name;
                     root.id = data.id;
                     root.active = data.active;
@@ -174,6 +194,8 @@ module WOZLLA.jsonx {
         protected _newComponent(compData:any, gameObj:WOZLLA.GameObject):WOZLLA.Component {
             var component = WOZLLA.Component.create(compData.name);
             var config = WOZLLA.Component.getConfig(compData.name);
+            component._uuid = compData.uuid;
+            this.uuidMap[compData.uuid] = component;
             component.gameObject = gameObj;
             this._applyComponentProperties(component, config.properties, compData);
             return component;

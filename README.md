@@ -48,6 +48,7 @@ Version 0.5.1 (Released)
 
 ## Change Logs
 
+* Version 1.0 (Released)
 * add AnimationRenderer
 * add simple primitives: RectRenderer, CircleRenderer
 * add TextRenderer
@@ -58,11 +59,6 @@ Version 0.5.1 (Released)
 * Version 0.5.1 (Released)
 
 ## RoadMap
-
-Version 1.0
-* Auto Assets Management
-* Graphics: Primitives/Text
-* Animation: Sprite Animation/Skeletal Animation
 
 Version 1.5
 * Stability Optimization

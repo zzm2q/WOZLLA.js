@@ -8704,10 +8704,12 @@ var WOZLLA;
          */
         var Asset = (function (_super) {
             __extends(Asset, _super);
-            function Asset(src) {
+            function Asset(src, baseDir) {
+                if (baseDir === void 0) { baseDir = ''; }
                 _super.call(this);
                 this._refCount = 0;
                 this._src = src;
+                this._baseDir = baseDir;
             }
             Object.defineProperty(Asset.prototype, "src", {
                 /**
@@ -8716,6 +8718,13 @@ var WOZLLA;
                  */
                 get: function () {
                     return this._src;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Asset.prototype, "fullPath", {
+                get: function () {
+                    return this._baseDir + this._src;
                 },
                 enumerable: true,
                 configurable: true
@@ -8777,6 +8786,7 @@ var WOZLLA;
             function AssetLoader() {
                 this._loadedAssets = {};
                 this._loadingUnits = {};
+                this._baseDir = '';
             }
             /**
              * return the singleton of this class
@@ -8789,6 +8799,12 @@ var WOZLLA;
                     AssetLoader.instance = new AssetLoader();
                 }
                 return AssetLoader.instance;
+            };
+            AssetLoader.prototype.getBaseDir = function () {
+                return this._baseDir;
+            };
+            AssetLoader.prototype.setBaseDir = function (baseDir) {
+                this._baseDir = baseDir;
             };
             /**
              * get an asset by src
@@ -8847,7 +8863,7 @@ var WOZLLA;
                     loadUnit.addCallback(callback, callback);
                     return;
                 }
-                asset = (new AssetClass(src));
+                asset = (new AssetClass(src, this._baseDir ? this._baseDir + "/" : ""));
                 loadUnit = new LoadUnit(src);
                 loadUnit.addCallback(callback, callback);
                 this._loadingUnits[src] = loadUnit;
@@ -9795,6 +9811,39 @@ var WOZLLA;
             this._py = 0;
             this._anchorMode = RectTransform.ANCHOR_CENTER | RectTransform.ANCHOR_MIDDLE;
         }
+        RectTransform.getMode = function (name) {
+            var names = name.split('_');
+            var value = 0;
+            switch (names[0]) {
+                case 'Left':
+                    value |= RectTransform.ANCHOR_LEFT;
+                    break;
+                case 'Right':
+                    value |= RectTransform.ANCHOR_RIGHT;
+                    break;
+                case 'Strength':
+                    value |= RectTransform.ANCHOR_HORIZONTAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_CENTER;
+                    break;
+            }
+            switch (names[1]) {
+                case 'Top':
+                    value |= RectTransform.ANCHOR_TOP;
+                    break;
+                case 'Bottom':
+                    value |= RectTransform.ANCHOR_BOTTOM;
+                    break;
+                case 'Strength':
+                    value |= RectTransform.ANCHOR_VERTICAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_MIDDLE;
+                    break;
+            }
+            return value;
+        };
         Object.defineProperty(RectTransform.prototype, "width", {
             /**
              * get or set width, this property only effect on fixed size mode
@@ -9953,7 +10002,11 @@ var WOZLLA;
          * @param {WOZLLA.RectTransform} rectTransform
          */
         RectTransform.prototype.set = function (rectTransform) {
-            this._anchorMode = rectTransform.anchorMode;
+            var anchorMode = rectTransform.anchorMode;
+            if (typeof anchorMode === 'string') {
+                anchorMode = RectTransform.getMode(anchorMode);
+            }
+            this._anchorMode = anchorMode;
             this._width = rectTransform.width || 0;
             this._height = rectTransform.height || 0;
             this._top = rectTransform.top || 0;
@@ -10406,6 +10459,17 @@ var WOZLLA;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(GameObject.prototype, "rawChildren", {
+            /**
+             * get raw children
+             * @returns {WOZLLA.GameObject[]}
+             */
+            get: function () {
+                return this._children;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(GameObject.prototype, "childCount", {
             /**
              * get child count
@@ -10593,14 +10657,19 @@ var WOZLLA;
             if (child._parent) {
                 child.removeMe();
             }
-            child.dispatchEvent(new WOZLLA.CoreEvent('beforeadd', true));
+            child.dispatchEvent(new WOZLLA.CoreEvent('beforeadd', false, {
+                parent: this
+            }));
             this._children.push(child);
             if (sort) {
                 this._children.sort(comparator);
             }
             child._parent = this;
             child._transform.dirty = true;
-            child.dispatchEvent(new WOZLLA.CoreEvent('add', true));
+            child.dispatchEvent(new WOZLLA.CoreEvent('add', false));
+            this.dispatchEvent(new WOZLLA.CoreEvent('childadd', false, {
+                child: child
+            }));
             return true;
         };
         /**
@@ -10611,10 +10680,15 @@ var WOZLLA;
         GameObject.prototype.removeChild = function (child) {
             var idx = this._children.indexOf(child);
             if (idx !== -1) {
-                child.dispatchEvent(new WOZLLA.CoreEvent('beforeremove', true, null, false));
+                child.dispatchEvent(new WOZLLA.CoreEvent('beforeremove', false));
                 this._children.splice(idx, 1);
                 child._parent = null;
-                child.dispatchEvent(new WOZLLA.CoreEvent('remove', true, null, false));
+                child.dispatchEvent(new WOZLLA.CoreEvent('remove', false, {
+                    parent: this
+                }));
+                this.dispatchEvent(new WOZLLA.CoreEvent('childremove', false, {
+                    child: child
+                }));
                 return true;
             }
             return false;
@@ -10728,6 +10802,9 @@ var WOZLLA;
          */
         GameObject.prototype.hasComponent = function (Type) {
             var comp, i, len;
+            if (Type === WOZLLA.RectTransform) {
+                return !!this._rectTransform;
+            }
             if (this._components.length <= 0) {
                 return false;
             }
@@ -10768,9 +10845,7 @@ var WOZLLA;
             if (this._components.indexOf(comp) !== -1) {
                 return false;
             }
-            if (!this.checkComponentDependency(comp)) {
-                throw new Error('Can\'t not add, because of dependency');
-            }
+            this.checkComponentDependency(comp);
             if (comp._gameObject) {
                 comp._gameObject.removeComponent(comp);
             }
@@ -10802,9 +10877,7 @@ var WOZLLA;
                 for (i = 0, len = this._components.length; i < len; i++) {
                     otherComp = this._components[i];
                     if (otherComp !== comp) {
-                        if (this.checkComponentDependency(otherComp)) {
-                            throw new Error('Can\'t not remove, because of dependency');
-                        }
+                        this.checkComponentDependency(otherComp, true);
                     }
                 }
                 this._components.splice(idx, 1);
@@ -10907,6 +10980,7 @@ var WOZLLA;
             for (i = 0, len = this._children.length; i < len; i++) {
                 this._children[i].visit(renderer, this._transform, flags);
             }
+            return flags;
         };
         /**
          * render this game object
@@ -11042,15 +11116,24 @@ var WOZLLA;
             }
             return result;
         };
-        GameObject.prototype.checkComponentDependency = function (comp) {
+        GameObject.prototype.checkComponentDependency = function (comp, isRemove) {
+            if (isRemove === void 0) { isRemove = false; }
             var Type;
             var requires = comp.listRequiredComponents();
-            var ret = true;
+            if (!requires || requires.length === 0)
+                return;
             for (var i = 0, len = requires.length; i < len; i++) {
                 Type = requires[i];
-                ret = ret && this.hasComponent(Type);
+                if (!this.hasComponent(Type)) {
+                    if (isRemove) {
+                        throw new Error('Can NOT remove: Component[' + WOZLLA.Component.getName(comp['constructor']) + '] depend on it');
+                    }
+                    else {
+                        var name = Type === WOZLLA.RectTransform ? 'RectTransform' : WOZLLA.Component.getName(Type);
+                        throw new Error('Can NOT add: Component[' + name + '] required');
+                    }
+                }
             }
-            return ret;
         };
         GameObject.MASK_TRANSFORM_DIRTY = 0x1;
         GameObject.MASK_VISIBLE = 0x10;
@@ -11060,6 +11143,17 @@ var WOZLLA;
         return GameObject;
     })(WOZLLA.event.EventDispatcher);
     WOZLLA.GameObject = GameObject;
+    var QueryRecord = (function () {
+        function QueryRecord() {
+            this.compExpr = null;
+            this.objExpr = null;
+            this.compName = null;
+            this.attrName = null;
+            this.target = null;
+        }
+        return QueryRecord;
+    })();
+    WOZLLA.QueryRecord = QueryRecord;
 })(WOZLLA || (WOZLLA = {}));
 /// <reference path="GameObject.ts"/>
 var WOZLLA;
@@ -11080,6 +11174,8 @@ var WOZLLA;
             this._viewRectTransform.anchorMode = WOZLLA.RectTransform.ANCHOR_TOP | WOZLLA.RectTransform.ANCHOR_LEFT;
             this._viewRectTransform.width = WOZLLA.Director.getInstance().renderer.viewport.width;
             this._viewRectTransform.height = WOZLLA.Director.getInstance().renderer.viewport.height;
+            this._viewRectTransform.px = 0;
+            this._viewRectTransform.py = 0;
             this.init();
         }
         Object.defineProperty(Stage.prototype, "viewRectTransform", {
@@ -11159,7 +11255,6 @@ var WOZLLA;
         function Scheduler() {
             this._scheduleCount = 0;
             this._schedules = {};
-            this._runScheduleCount = 0;
         }
         /**
          * @method {WOZLLA.Scheduler} getInstance
@@ -11173,21 +11268,31 @@ var WOZLLA;
             return Scheduler.instance;
         };
         Scheduler.prototype.runSchedule = function () {
-            var scheduleId, scheduleItem;
-            this._runScheduleCount = 0;
-            for (scheduleId in this._schedules) {
-                scheduleItem = this._schedules[scheduleId];
+            var scheduleId, scheduleItem, schedules;
+            var markScheduleCount = this._scheduleCount;
+            if (this._lastSchedules) {
+                for (scheduleId in this._schedules) {
+                    this._lastSchedules[scheduleId] = this._schedules[scheduleId];
+                }
+            }
+            else {
+                this._lastSchedules = this._schedules;
+            }
+            this._schedules = {};
+            schedules = this._lastSchedules;
+            for (scheduleId in schedules) {
+                scheduleItem = schedules[scheduleId];
                 if (scheduleItem.isFrame && !scheduleItem.paused) {
                     scheduleItem.frame--;
                     if (scheduleItem.frame < 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
                 else if (scheduleItem.isTime && !scheduleItem.paused) {
                     scheduleItem.time -= WOZLLA.Time.delta;
                     if (scheduleItem.time < 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
@@ -11201,7 +11306,9 @@ var WOZLLA;
                 else if (scheduleItem.isLoop && !scheduleItem.paused) {
                     scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                 }
-                this._runScheduleCount++;
+            }
+            if (markScheduleCount < this._scheduleCount) {
+                this.runSchedule();
             }
         };
         /**
@@ -12540,8 +12647,8 @@ var WOZLLA;
          */
         var GLTextureAsset = (function (_super) {
             __extends(GLTextureAsset, _super);
-            function GLTextureAsset(src) {
-                _super.call(this, src);
+            function GLTextureAsset() {
+                _super.apply(this, arguments);
             }
             Object.defineProperty(GLTextureAsset.prototype, "glTexture", {
                 get: function () {
@@ -12704,7 +12811,8 @@ var WOZLLA;
                     responseType: 'text/plain',
                     timeout: 30000,
                     success: empty,
-                    error: empty
+                    error: empty,
+                    withCredentials: false
                 });
                 xhr = new XMLHttpRequest();
                 xhr.responseType = options.responseType;
@@ -12720,6 +12828,7 @@ var WOZLLA;
                     }
                 };
                 xhr.open(options.method, options.url, options.async);
+                xhr.withCredentials = options.withCredentials;
                 timeoutId = setTimeout(function () {
                     xhr.onreadystatechange = empty;
                     xhr.abort();
@@ -12779,7 +12888,7 @@ var WOZLLA;
             JSONAsset.prototype.load = function (onSuccess, onError) {
                 var _this = this;
                 WOZLLA.utils.Ajax.request({
-                    url: this.src,
+                    url: this.fullPath,
                     contentType: 'json',
                     success: function (data) {
                         _this._data = data;
@@ -12816,8 +12925,10 @@ var WOZLLA;
                 AssetProxy.prototype.loadAsset = function (callback) {
                     var _this = this;
                     if (this.checkDirty()) {
-                        if (this.loading)
+                        if (this.loading) {
+                            callback && callback();
                             return;
+                        }
                         this.loading = true;
                         this.asset && this.asset.release();
                         this.asset = null;
@@ -12996,13 +13107,8 @@ var WOZLLA;
          */
         var SpriteAtlas = (function (_super) {
             __extends(SpriteAtlas, _super);
-            /**
-             * new a SpriteAtlas
-             * @method constructor
-             * @param src
-             */
-            function SpriteAtlas(src) {
-                _super.call(this, src);
+            function SpriteAtlas() {
+                _super.apply(this, arguments);
                 this._spriteCache = {};
             }
             Object.defineProperty(SpriteAtlas.prototype, "imageSrc", {
@@ -13110,8 +13216,8 @@ var WOZLLA;
              */
             SpriteAtlas.prototype.load = function (onSuccess, onError) {
                 var _this = this;
-                if (isImageURL(this.src)) {
-                    this._imageSrc = this.src;
+                if (isImageURL(this.fullPath)) {
+                    this._imageSrc = this.fullPath;
                     this._loadImage(function (error, image) {
                         if (error) {
                             onError && onError(error);
@@ -13130,7 +13236,7 @@ var WOZLLA;
                     });
                 }
                 else {
-                    this._metaSrc = this.src;
+                    this._metaSrc = this.fullPath;
                     this._loadSpriteAtlas(function (error, image, spriteData) {
                         if (error) {
                             onError && onError(error);
@@ -14418,7 +14524,6 @@ var WOZLLA;
         component.RectRenderer = RectRenderer;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
-/// <reference path="../math/Rectangle.ts"/>
 var WOZLLA;
 (function (WOZLLA) {
     var component;
@@ -14438,6 +14543,12 @@ var WOZLLA;
                     style[i] = json[i];
                 }
                 return style;
+            };
+            PropertyConverter.array2Padding = function (arr) {
+                return new WOZLLA.layout.Padding(arr[0], arr[1], arr[2], arr[3]);
+            };
+            PropertyConverter.array2Margin = function (arr) {
+                return new WOZLLA.layout.Margin(arr[0], arr[1], arr[2], arr[3]);
             };
             return PropertyConverter;
         })();
@@ -15439,7 +15550,21 @@ var WOZLLA;
             function JSONXBuilder() {
                 this.doLoad = false;
                 this.doInit = false;
+                this.async = true;
+                this.uuidMap = {};
             }
+            JSONXBuilder.create = function () {
+                if (JSONXBuilder.Factory) {
+                    return (new (JSONXBuilder.Factory)());
+                }
+                return new JSONXBuilder();
+            };
+            JSONXBuilder.prototype.getByUUID = function (uuid) {
+                return this.uuidMap[uuid];
+            };
+            JSONXBuilder.prototype.setSync = function () {
+                this.async = false;
+            };
             JSONXBuilder.prototype.instantiateWithSrc = function (src, callback) {
                 if (callback === void 0) { callback = emptyCallback; }
                 this.src = src;
@@ -15505,8 +15630,10 @@ var WOZLLA;
                 var _this = this;
                 if (this.src && !this.data) {
                     WOZLLA.utils.Ajax.request({
-                        url: this.src,
+                        url: WOZLLA.Director.getInstance().assetLoader.getBaseDir() + '/' + this.src,
                         contentType: 'json',
+                        async: this.async,
+                        withCredentials: true,
                         success: function (data) {
                             _this.data = data;
                             callback && callback();
@@ -15531,6 +15658,8 @@ var WOZLLA;
             JSONXBuilder.prototype._newGameObject = function (data, callback) {
                 var _this = this;
                 var gameObj = new WOZLLA.GameObject(data.rect);
+                gameObj._uuid = data.uuid;
+                this.uuidMap[data.uuid] = gameObj;
                 gameObj.id = data.id;
                 gameObj.name = data.name;
                 gameObj.active = data.active;
@@ -15580,6 +15709,8 @@ var WOZLLA;
                         _this.err = err;
                     }
                     else if (root) {
+                        root._uuid = data.uuid;
+                        _this.uuidMap[data.uuid] = root;
                         root.name = data.name;
                         root.id = data.id;
                         root.active = data.active;
@@ -15593,6 +15724,8 @@ var WOZLLA;
             JSONXBuilder.prototype._newComponent = function (compData, gameObj) {
                 var component = WOZLLA.Component.create(compData.name);
                 var config = WOZLLA.Component.getConfig(compData.name);
+                component._uuid = compData.uuid;
+                this.uuidMap[compData.uuid] = component;
                 component.gameObject = gameObj;
                 this._applyComponentProperties(component, config.properties, compData);
                 return component;
@@ -15612,8 +15745,8 @@ var WOZLLA;
                         }
                         else {
                             var value = compData.properties[prop.name];
-                            value = typeof value === 'undefined' ? prop.defaultValue : value;
-                            if (prop.convert) {
+                            value = value == void 0 ? prop.defaultValue : value;
+                            if (prop.convert && value) {
                                 value = prop.convert(value);
                             }
                             component[prop.name] = value;
@@ -15631,6 +15764,329 @@ var WOZLLA;
         })();
         jsonx.JSONXBuilder = JSONXBuilder;
     })(jsonx = WOZLLA.jsonx || (WOZLLA.jsonx = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var LayoutBase = (function (_super) {
+            __extends(LayoutBase, _super);
+            function LayoutBase() {
+                _super.apply(this, arguments);
+            }
+            LayoutBase.prototype.init = function () {
+                _super.prototype.init.call(this);
+                this.gameObject.addListenerScope('childadd', this.onChildAdd, this);
+                this.gameObject.addListenerScope('childremove', this.onChildRemove, this);
+                this.requestLayout();
+            };
+            LayoutBase.prototype.destroy = function () {
+                this.gameObject.removeListenerScope('childadd', this.onChildAdd, this);
+                this.gameObject.removeListenerScope('childremove', this.onChildRemove, this);
+                _super.prototype.destroy.call(this);
+            };
+            LayoutBase.prototype.doLayout = function () {
+            };
+            LayoutBase.prototype.requestLayout = function () {
+                var _this = this;
+                if (this._layoutSchedule)
+                    return;
+                this._layoutSchedule = WOZLLA.Director.getInstance().scheduler.scheduleFrame(function () {
+                    _this.doLayout();
+                    _this._layoutSchedule = null;
+                });
+            };
+            LayoutBase.prototype.cancelLayout = function () {
+                this._layoutSchedule && WOZLLA.Director.getInstance().scheduler.removeSchedule(this._layoutSchedule);
+                this._layoutSchedule = null;
+            };
+            LayoutBase.prototype.onChildAdd = function (e) {
+                this.requestLayout();
+            };
+            LayoutBase.prototype.onChildRemove = function (e) {
+                alert('remove');
+                this.requestLayout();
+            };
+            return LayoutBase;
+        })(WOZLLA.Component);
+        layout.LayoutBase = LayoutBase;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var math;
+    (function (math) {
+        /**
+         * @class WOZLLA.math.Size
+         * a util class contains width and height properties
+         */
+        var Size = (function () {
+            /**
+             * @method constructor
+             * create a new instance of Size
+             * @member WOZLLA.math.Size
+             * @param {number} width
+             * @param {number} height
+             */
+            function Size(width, height) {
+                /**
+                 * @property {number} width
+                 * get or set width of this object
+                 * @member WOZLLA.math.Size
+                 */
+                this.width = width;
+                /**
+                 * @property {number} height
+                 * get or set height of this object
+                 * @member WOZLLA.math.Size
+                 */
+                this.height = height;
+            }
+            /**
+             * get simple description of this object
+             * @returns {string}
+             */
+            Size.prototype.toString = function () {
+                return 'Size[' + this.width + ',' + this.height + ']';
+            };
+            return Size;
+        })();
+        math.Size = Size;
+    })(math = WOZLLA.math || (WOZLLA.math = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="LayoutBase.ts"/>
+/// <reference path="../math/Size.ts"/>
+/// <reference path="../component/PropertyConverter.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var helpSize = new WOZLLA.math.Size(0, 0);
+        var Grid = (function (_super) {
+            __extends(Grid, _super);
+            function Grid() {
+                _super.apply(this, arguments);
+            }
+            Grid.prototype.listRequiredComponents = function () {
+                return [WOZLLA.RectTransform];
+            };
+            Object.defineProperty(Grid.prototype, "padding", {
+                get: function () {
+                    return this._padding;
+                },
+                set: function (padding) {
+                    if (this._padding && this._padding.equals(padding))
+                        return;
+                    this._padding = padding;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Grid.prototype, "itemMargin", {
+                get: function () {
+                    return this._itemMargin;
+                },
+                set: function (margin) {
+                    if (this._itemMargin && this._itemMargin.equals(margin))
+                        return;
+                    this._itemMargin = margin;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Grid.prototype.doLayout = function () {
+                var padding = this._padding;
+                var margin = this._itemMargin;
+                var children = this.gameObject.rawChildren;
+                var col = 0;
+                var row = 0;
+                var rowHeight = 0;
+                var x = padding.left;
+                var y = padding.top;
+                var child;
+                var rect = this.gameObject.rectTransform;
+                for (var i = 0, len = children.length; i < len; i++) {
+                    child = children[i];
+                    this.measureChildSize(child, i, helpSize);
+                    // measure x, y
+                    x += margin.left;
+                    y += margin.top;
+                    // resolve new row
+                    if (x + helpSize.width + margin.right + padding.right > rect.width) {
+                        row++;
+                        col = 0;
+                        y += margin.bottom;
+                        y += helpSize.height;
+                        x = padding.left + margin.left;
+                    }
+                    // apply position
+                    if (child.rectTransform) {
+                        child.rectTransform.px = x;
+                        child.rectTransform.py = y;
+                    }
+                    else {
+                        child.transform.x = x;
+                        child.transform.y = y;
+                    }
+                    // determine row height
+                    if (helpSize.height > rowHeight) {
+                        rowHeight = helpSize.height;
+                    }
+                    // grow col num
+                    x += margin.right + helpSize.width;
+                    col++;
+                }
+            };
+            Grid.prototype.measureChildSize = function (child, idx, size) {
+                var rectTransform = child.rectTransform;
+                if (!rectTransform) {
+                    size.height = size.width = 0;
+                }
+                else {
+                    size.width = rectTransform.width;
+                    size.height = rectTransform.height;
+                }
+            };
+            return Grid;
+        })(layout.LayoutBase);
+        layout.Grid = Grid;
+        WOZLLA.Component.register(Grid, {
+            name: 'Grid',
+            properties: [{
+                name: 'padding',
+                type: 'Padding',
+                convert: WOZLLA.component.PropertyConverter.array2Padding,
+                defaultValue: [0, 0, 0, 0]
+            }, {
+                name: 'itemMargin',
+                type: 'Margin',
+                convert: WOZLLA.component.PropertyConverter.array2Margin,
+                defaultValue: [0, 0, 0, 0]
+            }]
+        });
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var Margin = (function () {
+            function Margin(top, left, bottom, right) {
+                this.top = top;
+                this.left = left;
+                this.bottom = bottom;
+                this.right = right;
+            }
+            Margin.prototype.equals = function (padding) {
+                return this.top === padding.top && this.bottom === padding.bottom && this.right === padding.right && this.left === padding.left;
+            };
+            return Margin;
+        })();
+        layout.Margin = Margin;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var Padding = (function () {
+            function Padding(top, left, bottom, right) {
+                this.top = top;
+                this.left = left;
+                this.bottom = bottom;
+                this.right = right;
+            }
+            Padding.prototype.equals = function (padding) {
+                return this.top === padding.top && this.bottom === padding.bottom && this.right === padding.right && this.left === padding.left;
+            };
+            return Padding;
+        })();
+        layout.Padding = Padding;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// <reference path="LayoutBase.ts"/>
+/// <reference path="../component/PropertyConverter.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var VBox = (function (_super) {
+            __extends(VBox, _super);
+            function VBox() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(VBox.prototype, "padding", {
+                get: function () {
+                    return this._padding;
+                },
+                set: function (padding) {
+                    if (this._padding && this._padding.equals(padding))
+                        return;
+                    this._padding = padding;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(VBox.prototype, "itemMargin", {
+                get: function () {
+                    return this._itemMargin;
+                },
+                set: function (margin) {
+                    if (this._itemMargin === margin)
+                        return;
+                    this._itemMargin = margin;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            VBox.prototype.doLayout = function () {
+                var _this = this;
+                var padding = this._padding;
+                var y = padding.top;
+                this.gameObject.eachChild(function (child, idx) {
+                    var rectTransform = child.rectTransform;
+                    if (!rectTransform) {
+                        child.transform.x = padding.left;
+                        child.transform.y = y;
+                    }
+                    else {
+                        rectTransform.anchorMode = WOZLLA.RectTransform.ANCHOR_LEFT | WOZLLA.RectTransform.ANCHOR_TOP;
+                        rectTransform.px = padding.left;
+                        rectTransform.py = y;
+                    }
+                    y += _this._itemMargin + _this.measureChildHeight(child, idx);
+                });
+            };
+            VBox.prototype.measureChildHeight = function (child, idx) {
+                var rectTransform = child.rectTransform;
+                if (!rectTransform) {
+                    return 0;
+                }
+                else {
+                    return rectTransform.height;
+                }
+            };
+            return VBox;
+        })(layout.LayoutBase);
+        layout.VBox = VBox;
+        WOZLLA.Component.register(VBox, {
+            name: 'VBox',
+            properties: [{
+                name: 'padding',
+                type: 'Padding',
+                convert: WOZLLA.component.PropertyConverter.array2Padding,
+                defaultValue: [0, 0, 0, 0]
+            }, {
+                name: 'itemMargin',
+                type: 'int',
+                defaultValue: 0
+            }]
+        });
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
 (function (WOZLLA) {
@@ -15694,48 +16150,6 @@ var WOZLLA;
             }
             MathUtils.rectIntersect2 = rectIntersect2;
         })(MathUtils = math.MathUtils || (math.MathUtils = {}));
-    })(math = WOZLLA.math || (WOZLLA.math = {}));
-})(WOZLLA || (WOZLLA = {}));
-var WOZLLA;
-(function (WOZLLA) {
-    var math;
-    (function (math) {
-        /**
-         * @class WOZLLA.math.Size
-         * a util class contains width and height properties
-         */
-        var Size = (function () {
-            /**
-             * @method constructor
-             * create a new instance of Size
-             * @member WOZLLA.math.Size
-             * @param {number} width
-             * @param {number} height
-             */
-            function Size(width, height) {
-                /**
-                 * @property {number} width
-                 * get or set width of this object
-                 * @member WOZLLA.math.Size
-                 */
-                this.width = width;
-                /**
-                 * @property {number} height
-                 * get or set height of this object
-                 * @member WOZLLA.math.Size
-                 */
-                this.height = height;
-            }
-            /**
-             * get simple description of this object
-             * @returns {string}
-             */
-            Size.prototype.toString = function () {
-                return 'Size[' + this.width + ',' + this.height + ']';
-            };
-            return Size;
-        })();
-        math.Size = Size;
     })(math = WOZLLA.math || (WOZLLA.math = {}));
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;

@@ -199,6 +199,7 @@ module WOZLLA {
          */
         get mask():Mask { return this._mask; }
 
+        _uuid:string;
         _id:string;
         _name;
         _active:boolean = true;
@@ -570,7 +571,7 @@ module WOZLLA {
          * @param parentTransform
          * @param flags
          */
-        visit(renderer:WOZLLA.renderer.IRenderer, parentTransform:Transform, flags:number):void {
+        visit(renderer:WOZLLA.renderer.IRenderer, parentTransform:Transform, flags:number):number {
             var i, len;
             if(!this._active || !this._initialized || this._destroyed) {
                 if((flags & GameObject.MASK_TRANSFORM_DIRTY) === GameObject.MASK_TRANSFORM_DIRTY) {
@@ -596,6 +597,8 @@ module WOZLLA {
             for(i=0,len=this._children.length; i<len; i++) {
                 this._children[i].visit(renderer, this._transform, flags);
             }
+
+            return flags;
         }
 
         /**

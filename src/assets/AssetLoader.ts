@@ -31,6 +31,16 @@ module WOZLLA.assets {
         _loadedAssets = {};
         _loadingUnits = {};
 
+        _baseDir:string = '';
+
+        getBaseDir() {
+            return this._baseDir;
+        }
+
+        setBaseDir(baseDir:string) {
+            this._baseDir = baseDir;
+        }
+
         /**
          * get an asset by src
          * @param src
@@ -90,7 +100,7 @@ module WOZLLA.assets {
                 loadUnit.addCallback(callback, callback);
                 return;
             }
-            asset = <Asset>(new (<any>AssetClass)(src));
+            asset = <Asset>(new (<any>AssetClass)(src, this._baseDir ? this._baseDir + "/" : ""));
             loadUnit = new LoadUnit(src);
             loadUnit.addCallback(callback, callback);
             this._loadingUnits[src] = loadUnit;

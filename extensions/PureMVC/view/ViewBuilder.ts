@@ -1,3 +1,4 @@
+///<reference path='View.ts'/>
 ///<reference path='../../../../WOZLLA.js/src/utils/Assert.ts'/>
 ///<reference path='../../../../WOZLLA.js/src/jsonx/JSONXBuilder.ts'/>
 module WOZLLA.PureMVC {
@@ -5,6 +6,27 @@ module WOZLLA.PureMVC {
     var Assert = WOZLLA.Assert;
 
     export class ViewBuilder extends WOZLLA.jsonx.JSONXBuilder {
+
+        public static fullBuild(src:any, modelMap:any , onComplete:(view:View) => void) {
+            var builder = new WOZLLA.PureMVC.ViewBuilder();
+            if(typeof src === 'string') {
+                builder.instantiateWithSrc(src);
+            } else {
+                builder.instantiateWithJSON(src);
+            }
+            for(var key in modelMap) {
+                var modelOrStore = modelMap[key];
+                if(modelOrStore instanceof Model) {
+                    builder.addModel(key, modelOrStore);
+                } else {
+                    builder.addStore(key, modelOrStore);
+                }
+            }
+            builder.load().init().build((error:any, root:WOZLLA.GameObject) => {
+                var view = <View>root.getComponent(View);
+                onComplete && onComplete(view);
+            });
+        }
 
         _modelMap:any = {};
         _storeMap:any = {};
