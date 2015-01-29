@@ -18,7 +18,7 @@ module WOZLLA {
                 case 'Right':
                     value |= RectTransform.ANCHOR_RIGHT;
                     break;
-                case 'Strength':
+                case 'HStrength':
                     value |= RectTransform.ANCHOR_HORIZONTAL_STRENGTH;
                     break;
                 default:
@@ -32,7 +32,7 @@ module WOZLLA {
                 case 'Bottom':
                     value |= RectTransform.ANCHOR_BOTTOM;
                     break;
-                case 'Strength':
+                case 'VStrength':
                     value |= RectTransform.ANCHOR_VERTICAL_STRENGTH;
                     break;
                 default:

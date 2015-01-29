@@ -247,7 +247,8 @@ module WOZLLA.component {
         }, {
             name: 'style',
             type: 'object',
-            convert: PropertyConverter.json2TextStyle
+            convert: PropertyConverter.json2TextStyle,
+            editor: 'textStyle'
         }]
     });
 

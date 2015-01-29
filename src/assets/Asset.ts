@@ -62,7 +62,7 @@ module WOZLLA.assets {
          * @param onSuccess
          * @param onError
          */
-        load(onSuccess:()=>any, onError:(error)=>any) {
+        load(onSuccess:()=>any, onError:(error)=>any):void {
             onSuccess();
         }
 
@@ -70,7 +70,7 @@ module WOZLLA.assets {
          * unload this asset
          * @fires unload event
          */
-        unload() {
+        unload():void {
             var event = new WOZLLA.event.Event(Asset.EVENT_UNLOAD, false);
             event.target = event.currentTarget = this;
             this.dispatchEvent(event);

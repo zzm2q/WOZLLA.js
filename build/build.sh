@@ -21,5 +21,5 @@ echo "minify js"
 java -jar compiler.jar dist/WOZLLA.${version}.all.js --js_output_file=dist/WOZLLA.${version}.all.min.js
 cd ../
 echo "generate api doc"
-#jsduck --config=jsduckconfig.json
+jsduck --config=jsduckconfig.json
 cd $PWD

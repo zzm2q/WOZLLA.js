@@ -176,7 +176,7 @@ module WOZLLA.assets {
             var me = this;
             WOZLLA.utils.Ajax.request({
                 url: me._metaSrc,
-                contentType: 'json',
+                dataType: 'json',
                 success: function(data:any) {
                     var imageSuffix = data.meta.image;
                     var metaFileName = getFileName(me._metaSrc);

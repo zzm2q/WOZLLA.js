@@ -208,6 +208,7 @@ var WOZLLA;
 (function (WOZLLA) {
     var event;
     (function (_event) {
+        var SCOPE = &#39;_EventDispatcher_scope&#39;;
         var ListenerList = (function () {
             function ListenerList() {
                 this._listeners = [];
@@ -215,11 +216,15 @@ var WOZLLA;
             ListenerList.prototype.add = function (listener) {
                 this._listeners.push(listener);
             };
-            ListenerList.prototype.remove = function (listener) {
+            ListenerList.prototype.remove = function (listener, scope) {
                 var i, len = this._listeners.length;
+                var l;
                 for (i = 0; i &lt; len; i++) {
-                    if (this._listeners[i] === listener) {
-                        this._listeners.splice(i, 1);
+                    l = this._listeners[i];
+                    if (l === listener) {
+                        if (!scope || scope === l[SCOPE]) {
+                            this._listeners.splice(i, 1);
+                        }
                         return true;
                     }
                 }
@@ -284,6 +289,11 @@ var WOZLLA;
                 if (useCapture === void 0) { useCapture = false; }
                 this._getListenerList(type, useCapture).add(listener);
             };
+            EventDispatcher.prototype.addListenerScope = function (type, listener, scope, useCapture) {
+                if (useCapture === void 0) { useCapture = false; }
+                listener[SCOPE] = scope;
+                this.addListener(type, listener, useCapture);
+            };
 <span id='WOZLLA-event-EventDispatcher-method-removeListener'>            /**
 </span>             * @method removeListener
              * @param {string} type
@@ -292,6 +302,10 @@ var WOZLLA;
             EventDispatcher.prototype.removeListener = function (type, listener, useCapture) {
                 if (useCapture === void 0) { useCapture = false; }
                 return this._getListenerList(type, useCapture).remove(listener);
+            };
+            EventDispatcher.prototype.removeListenerScope = function (type, listener, scope, userCapture) {
+                if (userCapture === void 0) { userCapture = false; }
+                return this._getListenerList(type, userCapture).remove(listener, scope);
             };
 <span id='WOZLLA-event-EventDispatcher-method-clearListeners'>            /**
 </span>             * @method clearListeners
@@ -344,6 +358,7 @@ var WOZLLA;
             EventDispatcher.prototype._dispatchEventInPhase = function (event, phase) {
                 var i, len;
                 var listener;
+                var scope;
                 var listenerList;
                 event._eventPhase = phase;
                 event._listenerRemove = false;
@@ -353,7 +368,13 @@ var WOZLLA;
                 if (len &gt; 0) {
                     for (i = len - 1; i &gt;= 0; i--) {
                         listener = listenerList.get(i);
-                        listener(event);
+                        scope = listener[SCOPE];
+                        if (scope) {
+                            listener.call(scope, event);
+                        }
+                        else {
+                            listener(event);
+                        }
                         // handle remove listener when client call event.removeCurrentListener();
                         if (event._listenerRemove) {
                             event._listenerRemove = false;
@@ -416,10 +437,12 @@ var WOZLLA;
          */
         var Asset = (function (_super) {
             __extends(Asset, _super);
-            function Asset(src) {
+            function Asset(src, baseDir) {
+                if (baseDir === void 0) { baseDir = &#39;&#39;; }
                 _super.call(this);
                 this._refCount = 0;
                 this._src = src;
+                this._baseDir = baseDir;
             }
             Object.defineProperty(Asset.prototype, &quot;src&quot;, {
 <span id='WOZLLA-assets-Asset-property-src'>                /**
@@ -428,6 +451,13 @@ var WOZLLA;
                  */
                 get: function () {
                     return this._src;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Asset.prototype, &quot;fullPath&quot;, {
+                get: function () {
+                    return this._baseDir + this._src;
                 },
                 enumerable: true,
                 configurable: true
@@ -489,6 +519,7 @@ var WOZLLA;
             function AssetLoader() {
                 this._loadedAssets = {};
                 this._loadingUnits = {};
+                this._baseDir = &#39;&#39;;
             }
 <span id='WOZLLA-assets-AssetLoader-static-method-getInstance'>            /**
 </span>             * return the singleton of this class
@@ -501,6 +532,12 @@ var WOZLLA;
                     AssetLoader.instance = new AssetLoader();
                 }
                 return AssetLoader.instance;
+            };
+            AssetLoader.prototype.getBaseDir = function () {
+                return this._baseDir;
+            };
+            AssetLoader.prototype.setBaseDir = function (baseDir) {
+                this._baseDir = baseDir;
             };
 <span id='WOZLLA-assets-AssetLoader-method-getAsset'>            /**
 </span>             * get an asset by src
@@ -559,7 +596,7 @@ var WOZLLA;
                     loadUnit.addCallback(callback, callback);
                     return;
                 }
-                asset = (new AssetClass(src));
+                asset = (new AssetClass(src, this._baseDir ? this._baseDir + &quot;/&quot; : &quot;&quot;));
                 loadUnit = new LoadUnit(src);
                 loadUnit.addCallback(callback, callback);
                 this._loadingUnits[src] = loadUnit;
@@ -1507,6 +1544,39 @@ var WOZLLA;
             this._py = 0;
             this._anchorMode = RectTransform.ANCHOR_CENTER | RectTransform.ANCHOR_MIDDLE;
         }
+        RectTransform.getMode = function (name) {
+            var names = name.split(&#39;_&#39;);
+            var value = 0;
+            switch (names[0]) {
+                case &#39;Left&#39;:
+                    value |= RectTransform.ANCHOR_LEFT;
+                    break;
+                case &#39;Right&#39;:
+                    value |= RectTransform.ANCHOR_RIGHT;
+                    break;
+                case &#39;HStrength&#39;:
+                    value |= RectTransform.ANCHOR_HORIZONTAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_CENTER;
+                    break;
+            }
+            switch (names[1]) {
+                case &#39;Top&#39;:
+                    value |= RectTransform.ANCHOR_TOP;
+                    break;
+                case &#39;Bottom&#39;:
+                    value |= RectTransform.ANCHOR_BOTTOM;
+                    break;
+                case &#39;VStrength&#39;:
+                    value |= RectTransform.ANCHOR_VERTICAL_STRENGTH;
+                    break;
+                default:
+                    value |= RectTransform.ANCHOR_MIDDLE;
+                    break;
+            }
+            return value;
+        };
         Object.defineProperty(RectTransform.prototype, &quot;width&quot;, {
 <span id='WOZLLA-RectTransform-property-width'>            /**
 </span>             * get or set width, this property only effect on fixed size mode
@@ -1665,7 +1735,11 @@ var WOZLLA;
          * @param {WOZLLA.RectTransform} rectTransform
          */
         RectTransform.prototype.set = function (rectTransform) {
-            this._anchorMode = rectTransform.anchorMode;
+            var anchorMode = rectTransform.anchorMode;
+            if (typeof anchorMode === &#39;string&#39;) {
+                anchorMode = RectTransform.getMode(anchorMode);
+            }
+            this._anchorMode = anchorMode;
             this._width = rectTransform.width || 0;
             this._height = rectTransform.height || 0;
             this._top = rectTransform.top || 0;
@@ -1852,10 +1926,12 @@ var WOZLLA;
 <span id='WOZLLA-Component-property-gameObject'>            /**
 </span>             * get the GameObject of this component belongs to.
              * @property {WOZLLA.GameObject} gameObject
-             * @readonly
              */
             get: function () {
                 return this._gameObject;
+            },
+            set: function (value) {
+                this._gameObject = value;
             },
             enumerable: true,
             configurable: true
@@ -1887,6 +1963,14 @@ var WOZLLA;
         Component.prototype.listRequiredComponents = function () {
             return [];
         };
+        Component.getType = function (name) {
+            var ret = this.ctorMap[name];
+            WOZLLA.Assert.isNotUndefined(ret, &#39;Can\&#39;t found component: &#39; + name);
+            return ret;
+        };
+        Component.getName = function (Type) {
+            return Type.componentName;
+        };
 <span id='WOZLLA-Component-static-method-register'>        /**
 </span>         * register an component class and it&#39;s configuration
          * @method register
@@ -1898,7 +1982,15 @@ var WOZLLA;
             WOZLLA.Assert.isObject(config);
             WOZLLA.Assert.isString(config.name);
             WOZLLA.Assert.isUndefined(Component.configMap[config.name]);
-            Component.configMap[config.name] = ctor;
+            Component.ctorMap[config.name] = ctor;
+            Component.configMap[config.name] = config;
+            ctor.componentName = config.name;
+        };
+        Component.unregister = function (name) {
+            WOZLLA.Assert.isString(name);
+            WOZLLA.Assert.isNotUndefined(Component.configMap[name]);
+            delete Component.ctorMap[name];
+            delete Component.configMap[name];
         };
 <span id='WOZLLA-Component-method-create'>        /**
 </span>         * create component by it&#39;s registed name.
@@ -1907,17 +1999,28 @@ var WOZLLA;
          */
         Component.create = function (name) {
             WOZLLA.Assert.isString(name);
-            var ctor = Component.configMap[name];
+            var ctor = Component.ctorMap[name];
             WOZLLA.Assert.isFunction(ctor);
             return new ctor();
         };
         Component.getConfig = function (name) {
             var config;
-            WOZLLA.Assert.isString(name);
+            WOZLLA.Assert.isNotUndefined(name);
+            if (typeof name === &#39;function&#39;) {
+                name = Component.getName(name);
+            }
             config = Component.configMap[name];
             WOZLLA.Assert.isNotUndefined(config);
             return config;
         };
+        Component.extendConfig = function (Type) {
+            var name = Component.getName(Type);
+            return {
+                group: name,
+                properties: Component.getConfig(name).properties
+            };
+        };
+        Component.ctorMap = {};
         Component.configMap = {};
         return Component;
     })(WOZLLA.event.EventDispatcher);
@@ -2092,6 +2195,17 @@ var WOZLLA;
              */
             get: function () {
                 return this._children.slice(0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(GameObject.prototype, &quot;rawChildren&quot;, {
+<span id='WOZLLA-GameObject-method-get'>            /**
+</span>             * get raw children
+             * @returns {WOZLLA.GameObject[]}
+             */
+            get: function () {
+                return this._children;
             },
             enumerable: true,
             configurable: true
@@ -2283,14 +2397,19 @@ var WOZLLA;
             if (child._parent) {
                 child.removeMe();
             }
-            child.dispatchEvent(new WOZLLA.CoreEvent(&#39;beforeadd&#39;, true));
+            child.dispatchEvent(new WOZLLA.CoreEvent(&#39;beforeadd&#39;, false, {
+                parent: this
+            }));
             this._children.push(child);
             if (sort) {
                 this._children.sort(comparator);
             }
             child._parent = this;
             child._transform.dirty = true;
-            child.dispatchEvent(new WOZLLA.CoreEvent(&#39;add&#39;, true));
+            child.dispatchEvent(new WOZLLA.CoreEvent(&#39;add&#39;, false));
+            this.dispatchEvent(new WOZLLA.CoreEvent(&#39;childadd&#39;, false, {
+                child: child
+            }));
             return true;
         };
 <span id='WOZLLA-GameObject-method-removeChild'>        /**
@@ -2301,10 +2420,15 @@ var WOZLLA;
         GameObject.prototype.removeChild = function (child) {
             var idx = this._children.indexOf(child);
             if (idx !== -1) {
-                child.dispatchEvent(new WOZLLA.CoreEvent(&#39;beforeremove&#39;, true, null, false));
+                child.dispatchEvent(new WOZLLA.CoreEvent(&#39;beforeremove&#39;, false));
                 this._children.splice(idx, 1);
                 child._parent = null;
-                child.dispatchEvent(new WOZLLA.CoreEvent(&#39;remove&#39;, true, null, false));
+                child.dispatchEvent(new WOZLLA.CoreEvent(&#39;remove&#39;, false, {
+                    parent: this
+                }));
+                this.dispatchEvent(new WOZLLA.CoreEvent(&#39;childremove&#39;, false, {
+                    child: child
+                }));
                 return true;
             }
             return false;
@@ -2418,6 +2542,9 @@ var WOZLLA;
          */
         GameObject.prototype.hasComponent = function (Type) {
             var comp, i, len;
+            if (Type === WOZLLA.RectTransform) {
+                return !!this._rectTransform;
+            }
             if (this._components.length &lt;= 0) {
                 return false;
             }
@@ -2458,9 +2585,7 @@ var WOZLLA;
             if (this._components.indexOf(comp) !== -1) {
                 return false;
             }
-            if (!this.checkComponentDependency(comp)) {
-                throw new Error(&#39;Can\&#39;t not add, because of dependency&#39;);
-            }
+            this.checkComponentDependency(comp);
             if (comp._gameObject) {
                 comp._gameObject.removeComponent(comp);
             }
@@ -2492,9 +2617,7 @@ var WOZLLA;
                 for (i = 0, len = this._components.length; i &lt; len; i++) {
                     otherComp = this._components[i];
                     if (otherComp !== comp) {
-                        if (this.checkComponentDependency(otherComp)) {
-                            throw new Error(&#39;Can\&#39;t not remove, because of dependency&#39;);
-                        }
+                        this.checkComponentDependency(otherComp, true);
                     }
                 }
                 this._components.splice(idx, 1);
@@ -2597,6 +2720,7 @@ var WOZLLA;
             for (i = 0, len = this._children.length; i &lt; len; i++) {
                 this._children[i].visit(renderer, this._transform, flags);
             }
+            return flags;
         };
 <span id='WOZLLA-GameObject-method-render'>        /**
 </span>         * render this game object
@@ -2673,21 +2797,103 @@ var WOZLLA;
                 });
             }
         };
-        GameObject.prototype.checkComponentDependency = function (comp) {
+        GameObject.prototype.query = function (expr, record) {
+            var result, compExpr, objExpr, compName, attrName;
+            var objArr;
+            var hasAttr = expr.indexOf(&#39;[&#39;) !== -1 &amp;&amp; expr.indexOf(&#39;]&#39;) !== -1;
+            var hasComp = expr.indexOf(&#39;:&#39;) !== -1;
+            if (hasComp &amp;&amp; hasAttr) {
+                result = GameObject.QUERY_FULL_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+                attrName = result[4];
+            }
+            else if (hasComp &amp;&amp; !hasAttr) {
+                result = GameObject.QUERY_COMP_REGEX.exec(expr);
+                compExpr = result[1];
+                objExpr = result[2];
+                compName = result[3];
+            }
+            else if (!hasComp &amp;&amp; hasAttr) {
+                result = GameObject.QUERY_OBJ_ATTR_REGEX.exec(expr);
+                objExpr = result[1];
+                attrName = result[2];
+            }
+            else {
+                objExpr = expr;
+            }
+            if (record) {
+                record.compExpr = compExpr;
+                record.objExpr = objExpr;
+                record.compName = compName;
+                record.attrName = attrName;
+            }
+            if (!objExpr) {
+                result = this;
+            }
+            else {
+                result = this;
+                objArr = objExpr.split(&#39;/&#39;);
+                for (var i = 0, len = objArr.length; i &lt; len; i++) {
+                    if (!objArr[i]) {
+                        break;
+                    }
+                    result = result.getChild(objArr[i]);
+                    if (!result) {
+                        break;
+                    }
+                }
+            }
+            if (result &amp;&amp; compName) {
+                result = result.getComponent(WOZLLA.Component.getType(compName));
+            }
+            if (result &amp;&amp; record) {
+                record.target = result;
+            }
+            if (result &amp;&amp; attrName) {
+                result = result[attrName];
+            }
+            return result;
+        };
+        GameObject.prototype.checkComponentDependency = function (comp, isRemove) {
+            if (isRemove === void 0) { isRemove = false; }
             var Type;
             var requires = comp.listRequiredComponents();
-            var ret = true;
+            if (!requires || requires.length === 0)
+                return;
             for (var i = 0, len = requires.length; i &lt; len; i++) {
                 Type = requires[i];
-                ret = ret &amp;&amp; this.hasComponent(Type);
+                if (!this.hasComponent(Type)) {
+                    if (isRemove) {
+                        throw new Error(&#39;Can NOT remove: Component[&#39; + WOZLLA.Component.getName(comp[&#39;constructor&#39;]) + &#39;] depend on it&#39;);
+                    }
+                    else {
+                        var name = Type === WOZLLA.RectTransform ? &#39;RectTransform&#39; : WOZLLA.Component.getName(Type);
+                        throw new Error(&#39;Can NOT add: Component[&#39; + name + &#39;] required&#39;);
+                    }
+                }
             }
-            return ret;
         };
         GameObject.MASK_TRANSFORM_DIRTY = 0x1;
         GameObject.MASK_VISIBLE = 0x10;
+        GameObject.QUERY_FULL_REGEX = /((.*?):(.*?))\[(.*?)\]$/;
+        GameObject.QUERY_COMP_REGEX = /((.*?):(.*?))$/;
+        GameObject.QUERY_OBJ_ATTR_REGEX = /(.*?)\[(.*?)\]$/;
         return GameObject;
     })(WOZLLA.event.EventDispatcher);
     WOZLLA.GameObject = GameObject;
+    var QueryRecord = (function () {
+        function QueryRecord() {
+            this.compExpr = null;
+            this.objExpr = null;
+            this.compName = null;
+            this.attrName = null;
+            this.target = null;
+        }
+        return QueryRecord;
+    })();
+    WOZLLA.QueryRecord = QueryRecord;
 })(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;GameObject.ts&quot;/&gt;
 var WOZLLA;
@@ -2708,6 +2914,8 @@ var WOZLLA;
             this._viewRectTransform.anchorMode = WOZLLA.RectTransform.ANCHOR_TOP | WOZLLA.RectTransform.ANCHOR_LEFT;
             this._viewRectTransform.width = WOZLLA.Director.getInstance().renderer.viewport.width;
             this._viewRectTransform.height = WOZLLA.Director.getInstance().renderer.viewport.height;
+            this._viewRectTransform.px = 0;
+            this._viewRectTransform.py = 0;
             this.init();
         }
         Object.defineProperty(Stage.prototype, &quot;viewRectTransform&quot;, {
@@ -2787,7 +2995,6 @@ var WOZLLA;
         function Scheduler() {
             this._scheduleCount = 0;
             this._schedules = {};
-            this._runScheduleCount = 0;
         }
 <span id='WOZLLA-Scheduler-static-method-getInstance'>        /**
 </span>         * @method {WOZLLA.Scheduler} getInstance
@@ -2801,21 +3008,31 @@ var WOZLLA;
             return Scheduler.instance;
         };
         Scheduler.prototype.runSchedule = function () {
-            var scheduleId, scheduleItem;
-            this._runScheduleCount = 0;
-            for (scheduleId in this._schedules) {
-                scheduleItem = this._schedules[scheduleId];
+            var scheduleId, scheduleItem, schedules;
+            var markScheduleCount = this._scheduleCount;
+            if (this._lastSchedules) {
+                for (scheduleId in this._schedules) {
+                    this._lastSchedules[scheduleId] = this._schedules[scheduleId];
+                }
+            }
+            else {
+                this._lastSchedules = this._schedules;
+            }
+            this._schedules = {};
+            schedules = this._lastSchedules;
+            for (scheduleId in schedules) {
+                scheduleItem = schedules[scheduleId];
                 if (scheduleItem.isFrame &amp;&amp; !scheduleItem.paused) {
                     scheduleItem.frame--;
                     if (scheduleItem.frame &lt; 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
                 else if (scheduleItem.isTime &amp;&amp; !scheduleItem.paused) {
                     scheduleItem.time -= WOZLLA.Time.delta;
                     if (scheduleItem.time &lt; 0) {
-                        delete this._schedules[scheduleId];
+                        delete schedules[scheduleId];
                         scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                     }
                 }
@@ -2829,7 +3046,9 @@ var WOZLLA;
                 else if (scheduleItem.isLoop &amp;&amp; !scheduleItem.paused) {
                     scheduleItem.task.apply(scheduleItem, scheduleItem.args);
                 }
-                this._runScheduleCount++;
+            }
+            if (markScheduleCount &lt; this._scheduleCount) {
+                this.runSchedule();
             }
         };
 <span id='WOZLLA-Scheduler-method-removeSchedule'>        /**
@@ -2862,8 +3081,8 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleFrame = function (task, frame, args) {
+            if (frame === void 0) { frame = 0; }
             var scheduleId = &#39;Schedule_&#39; + (this._scheduleCount++);
-            frame = frame || 0;
             this._schedules[scheduleId] = {
                 task: task,
                 frame: frame,
@@ -2880,6 +3099,7 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleInterval = function (task, time, args) {
+            if (time === void 0) { time = 0; }
             var scheduleId = &#39;Schedule_&#39; + (this._scheduleCount++);
             this._schedules[scheduleId] = {
                 task: task,
@@ -2898,6 +3118,7 @@ var WOZLLA;
          * @returns {string} schedule id
          */
         Scheduler.prototype.scheduleTime = function (task, time, args) {
+            if (time === void 0) { time = 0; }
             var scheduleId = &#39;Schedule_&#39; + (this._scheduleCount++);
             time = time || 0;
             this._schedules[scheduleId] = {
@@ -3582,12 +3803,12 @@ var WOZLLA;
             TextureManager.prototype.getTexture = function (id) {
                 return this._textureMap[id];
             };
-            TextureManager.prototype.generateTexture = function (descriptor) {
+            TextureManager.prototype.generateTexture = function (descriptor, textureId) {
                 var texture;
                 var pvrtcExt;
                 var compressedType;
                 var gl = this._gl;
-                var id = gl.createTexture();
+                var id = textureId || gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, id);
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -3626,6 +3847,9 @@ var WOZLLA;
                 texture = new renderer.Texture(id, descriptor);
                 this._textureMap[id] = texture;
                 return texture;
+            };
+            TextureManager.prototype.updateTexture = function (texture) {
+                this.generateTexture(texture.descriptor, texture.id);
             };
             TextureManager.prototype.deleteTexture = function (texture) {
                 this._gl.deleteTexture(texture.id);
@@ -4097,7 +4321,7 @@ var WOZLLA;
         Object.defineProperty(Director.prototype, &quot;viewRectTransform&quot;, {
 <span id='WOZLLA-Director-method-get'>            /**
 </span>             * get the root instance of RectTransform
-             * @returns {WOZLLA.RectTransform}
+             * @returns {WOZLLA.RectTransform} viewRectTransform
              */
             get: function () {
                 return this._stage.viewRectTransform;
@@ -4163,8 +4387,8 @@ var WOZLLA;
          */
         var GLTextureAsset = (function (_super) {
             __extends(GLTextureAsset, _super);
-            function GLTextureAsset(src) {
-                _super.call(this, src);
+            function GLTextureAsset() {
+                _super.apply(this, arguments);
             }
             Object.defineProperty(GLTextureAsset.prototype, &quot;glTexture&quot;, {
                 get: function () {
@@ -4278,29 +4502,211 @@ var WOZLLA;
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
 (function (WOZLLA) {
+    var utils;
+    (function (utils) {
+        function applyProperties(target, source) {
+            for (var i in source) {
+                if (typeof target[i] === &#39;undefined&#39;) {
+                    target[i] = source[i];
+                }
+            }
+            return target;
+        }
+        var contentParser = {
+            &#39;json&#39;: function (xhr) {
+                return JSON.parse(xhr.responseText);
+            },
+            &#39;arraybuffer&#39;: function (xhr) {
+                return xhr.response;
+            }
+        };
+        var empty = function () {
+        };
+<span id='WOZLLA-utils-Ajax'>        /**
+</span>         * @class WOZLLA.utils.Ajax
+         */
+        var Ajax = (function () {
+            function Ajax() {
+            }
+<span id='WOZLLA-utils-Ajax-method-request'>            /**
+</span>             * send a request with options
+             * @param {object} options
+             * @param {boolean} options.async
+             * @param {string} options.method GET/POST
+             * @param {string} options.contentType text/json/xml
+             * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
+             * @param {number} [options.timeout=30000]
+             * @param {function} options.success call when ajax request successfully
+             * @param {function} options.error call when ajax request error
+             */
+            Ajax.request = function (options) {
+                if (options === void 0) { options = {}; }
+                var xhr;
+                var timeoutId;
+                options = applyProperties(options, {
+                    url: &#39;&#39;,
+                    async: true,
+                    method: &#39;GET&#39;,
+                    dataType: &#39;text&#39;,
+                    responseType: &#39;text/plain&#39;,
+                    timeout: 30000,
+                    success: empty,
+                    error: empty,
+                    withCredentials: false
+                });
+                xhr = new XMLHttpRequest();
+                xhr.responseType = options.responseType;
+                xhr.onreadystatechange = function () {
+                    var parser;
+                    if (xhr.readyState === 4) {
+                        xhr.onreadystatechange = empty;
+                        clearTimeout(timeoutId);
+                        parser = contentParser[options.dataType] || function () {
+                            return xhr.responseText;
+                        };
+                        options.success(parser(xhr));
+                    }
+                };
+                xhr.open(options.method, options.url, options.async);
+                xhr.withCredentials = options.withCredentials;
+                timeoutId = setTimeout(function () {
+                    xhr.onreadystatechange = empty;
+                    xhr.abort();
+                    options.error({
+                        code: Ajax.ERROR_TIMEOUT,
+                        message: &#39;request timeout&#39;
+                    });
+                }, options.timeout);
+                xhr.send();
+            };
+<span id='WOZLLA-utils-Ajax-static-property-ERROR_TIMEOUT'>            /**
+</span>             * internal ajax error code when timeout
+             * @property ERROR_TIMEOUT
+             * @static
+             * @readonly
+             */
+            Ajax.ERROR_TIMEOUT = 1;
+<span id='WOZLLA-utils-Ajax-static-property-ERROR_SERVER'>            /**
+</span>             * internal ajax error code when server error
+             * @property ERROR_SERVER
+             * @static
+             * @readonly
+             */
+            Ajax.ERROR_SERVER = 2;
+            return Ajax;
+        })();
+        utils.Ajax = Ajax;
+    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;Asset.ts&quot;/&gt;
+/// &lt;reference path=&quot;../utils/Ajax.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var assets;
+    (function (assets) {
+        function deepCopyJSON(o) {
+            var copy = o, k;
+            if (o &amp;&amp; typeof o === &#39;object&#39;) {
+                copy = Object.prototype.toString.call(o) === &#39;[object Array]&#39; ? [] : {};
+                for (k in o) {
+                    copy[k] = deepCopyJSON(o[k]);
+                }
+            }
+            return copy;
+        }
+        var JSONAsset = (function (_super) {
+            __extends(JSONAsset, _super);
+            function JSONAsset() {
+                _super.apply(this, arguments);
+            }
+            JSONAsset.prototype.cloneData = function () {
+                if (!this._data) {
+                    return this._data;
+                }
+                return deepCopyJSON(this._data);
+            };
+            JSONAsset.prototype.load = function (onSuccess, onError) {
+                var _this = this;
+                WOZLLA.utils.Ajax.request({
+                    url: this.fullPath,
+                    dataType: &#39;json&#39;,
+                    success: function (data) {
+                        _this._data = data;
+                        onSuccess();
+                    },
+                    error: function (error) {
+                        onError(error);
+                    }
+                });
+            };
+            JSONAsset.prototype.unload = function () {
+                this._data = null;
+                _super.prototype.unload.call(this);
+            };
+            return JSONAsset;
+        })(assets.Asset);
+        assets.JSONAsset = JSONAsset;
+    })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
     var assets;
     (function (assets) {
         var proxy;
         (function (proxy) {
             var AssetProxy = (function () {
                 function AssetProxy(proxyTarget) {
-                    this.dirty = true;
+                    this.loading = false;
                     this.proxyTarget = proxyTarget;
                 }
-                AssetProxy.prototype.setDirty = function () {
-                    this.dirty = true;
+                AssetProxy.prototype.setAssetSrc = function (src) {
+                    this.newAssetSrc = src;
                 };
                 AssetProxy.prototype.loadAsset = function (callback) {
+                    var _this = this;
                     if (this.checkDirty()) {
+                        if (this.loading) {
+                            callback &amp;&amp; callback();
+                            return;
+                        }
+                        this.loading = true;
                         this.asset &amp;&amp; this.asset.release();
-                        this.doLoad(callback);
+                        this.asset = null;
+                        this.doLoad(function (asset) {
+                            if (!asset) {
+                                _this.asset = null;
+                                callback &amp;&amp; callback();
+                            }
+                            else if (asset.src !== _this.newAssetSrc) {
+                                asset.retain();
+                                asset.release();
+                                _this.asset = null;
+                            }
+                            else {
+                                _this.asset = asset;
+                                _this.asset.retain();
+                            }
+                            _this.loading = false;
+                            _this.proxyTarget.onAssetLoaded(asset);
+                            callback &amp;&amp; callback();
+                        });
+                    }
+                    else {
+                        callback &amp;&amp; callback();
                     }
                 };
+                AssetProxy.prototype.onDestroy = function () {
+                    this.asset &amp;&amp; this.asset.release();
+                    this.asset = null;
+                };
                 AssetProxy.prototype.checkDirty = function () {
-                    return this.dirty;
+                    if (!this.asset) {
+                        return !!this.newAssetSrc;
+                    }
+                    return this.newAssetSrc !== this.asset.src;
                 };
                 AssetProxy.prototype.doLoad = function (callback) {
-                    callback();
+                    callback(null);
                 };
                 return AssetProxy;
             })();
@@ -4319,15 +4725,27 @@ var WOZLLA;
                 function SpriteAtlasProxy() {
                     _super.apply(this, arguments);
                 }
-                SpriteAtlasProxy.prototype.checkDirty = function () {
-                    if (!this.dirty) {
-                        return false;
+                SpriteAtlasProxy.prototype.getSprite = function (spriteName) {
+                    if (this.asset) {
+                        return this.asset.getSprite(spriteName);
                     }
-                    if (this._spriteAtlasSrc !== this.proxyTarget.getSpriteAltasSrc()) {
+                    return null;
+                };
+                SpriteAtlasProxy.prototype.getFrameLength = function () {
+                    if (!this.asset) {
+                        return 0;
                     }
+                    return this.asset.getFrameLength();
                 };
                 SpriteAtlasProxy.prototype.doLoad = function (callback) {
-                    callback();
+                    var src = this.newAssetSrc;
+                    if (!src) {
+                        callback(null);
+                        return;
+                    }
+                    assets.AssetLoader.getInstance().load(src, assets.SpriteAtlas, function () {
+                        callback(assets.AssetLoader.getInstance().getAsset(src));
+                    });
                 };
                 return SpriteAtlasProxy;
             })(proxy.AssetProxy);
@@ -4400,102 +4818,6 @@ var WOZLLA;
         assets.Sprite = Sprite;
     })(assets = WOZLLA.assets || (WOZLLA.assets = {}));
 })(WOZLLA || (WOZLLA = {}));
-var WOZLLA;
-(function (WOZLLA) {
-    var utils;
-    (function (utils) {
-        function applyProperties(target, source) {
-            for (var i in source) {
-                if (typeof target[i] === &#39;undefined&#39;) {
-                    target[i] = source[i];
-                }
-            }
-            return target;
-        }
-        var contentParser = {
-            &#39;json&#39;: function (xhr) {
-                return JSON.parse(xhr.responseText);
-            },
-            &#39;arraybuffer&#39;: function (xhr) {
-                return xhr.response;
-            }
-        };
-        var empty = function () {
-        };
-<span id='WOZLLA-utils-Ajax'>        /**
-</span>         * @class WOZLLA.utils.Ajax
-         */
-        var Ajax = (function () {
-            function Ajax() {
-            }
-<span id='WOZLLA-utils-Ajax-method-request'>            /**
-</span>             * send a request with options
-             * @param {object} options
-             * @param {boolean} options.async
-             * @param {string} options.method GET/POST
-             * @param {string} options.contentType text/json/xml
-             * @param {string} options.responseType text/plain,text/javascript,text/css,arraybuffer
-             * @param {number} [options.timeout=30000]
-             * @param {function} options.success call when ajax request successfully
-             * @param {function} options.error call when ajax request error
-             */
-            Ajax.request = function (options) {
-                if (options === void 0) { options = {}; }
-                var xhr;
-                var timeoutId;
-                options = applyProperties(options, {
-                    url: &#39;&#39;,
-                    async: true,
-                    method: &#39;GET&#39;,
-                    contentType: &#39;text&#39;,
-                    responseType: &#39;text/plain&#39;,
-                    timeout: 30000,
-                    success: empty,
-                    error: empty
-                });
-                xhr = new XMLHttpRequest();
-                xhr.responseType = options.responseType;
-                xhr.onreadystatechange = function () {
-                    var parser;
-                    if (xhr.readyState === 4) {
-                        xhr.onreadystatechange = empty;
-                        clearTimeout(timeoutId);
-                        parser = contentParser[options.contentType] || function () {
-                            return xhr.responseText;
-                        };
-                        options.success(parser(xhr));
-                    }
-                };
-                xhr.open(options.method, options.url, options.async);
-                timeoutId = setTimeout(function () {
-                    xhr.onreadystatechange = empty;
-                    xhr.abort();
-                    options.error({
-                        code: Ajax.ERROR_TIMEOUT,
-                        message: &#39;request timeout&#39;
-                    });
-                }, options.timeout);
-                xhr.send();
-            };
-<span id='WOZLLA-utils-Ajax-static-property-ERROR_TIMEOUT'>            /**
-</span>             * internal ajax error code when timeout
-             * @property ERROR_TIMEOUT
-             * @static
-             * @readonly
-             */
-            Ajax.ERROR_TIMEOUT = 1;
-<span id='WOZLLA-utils-Ajax-static-property-ERROR_SERVER'>            /**
-</span>             * internal ajax error code when server error
-             * @property ERROR_SERVER
-             * @static
-             * @readonly
-             */
-            Ajax.ERROR_SERVER = 2;
-            return Ajax;
-        })();
-        utils.Ajax = Ajax;
-    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
-})(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;Sprite.ts&quot;/&gt;
 /// &lt;reference path=&quot;../utils/Ajax.ts&quot;/&gt;
 var WOZLLA;
@@ -4525,13 +4847,8 @@ var WOZLLA;
          */
         var SpriteAtlas = (function (_super) {
             __extends(SpriteAtlas, _super);
-<span id='WOZLLA-assets-SpriteAtlas-method-constructor'>            /**
-</span>             * new a SpriteAtlas
-             * @method constructor
-             * @param src
-             */
-            function SpriteAtlas(src) {
-                _super.call(this, src);
+            function SpriteAtlas() {
+                _super.apply(this, arguments);
                 this._spriteCache = {};
             }
             Object.defineProperty(SpriteAtlas.prototype, &quot;imageSrc&quot;, {
@@ -4579,6 +4896,23 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
+            SpriteAtlas.prototype.getFrameLength = function () {
+                var frames;
+                if (!this._spriteData) {
+                    return 1;
+                }
+                frames = this._spriteData.frames;
+                if (Object.prototype.toString.call(frames) === &#39;[object Array]&#39;) {
+                    return frames.length;
+                }
+                if (this._frameLengthCache == void 0) {
+                    this._frameLengthCache = 0;
+                    for (var _ in frames) {
+                        this._frameLengthCache++;
+                    }
+                }
+                return this._frameLengthCache;
+            };
 <span id='WOZLLA-assets-SpriteAtlas-method-getSprite'>            /**
 </span>             * get sprite by name
              * @param name
@@ -4586,7 +4920,7 @@ var WOZLLA;
              */
             SpriteAtlas.prototype.getSprite = function (name) {
                 var frameData, sprite;
-                if (!name) {
+                if (name == void 0) {
                     return this._entireSprite;
                 }
                 sprite = this._spriteCache[name];
@@ -4606,7 +4940,9 @@ var WOZLLA;
                         x: frameData.frame.x,
                         y: frameData.frame.y,
                         width: frameData.frame.width,
-                        height: frameData.frame.height
+                        height: frameData.frame.height,
+                        offsetX: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.x || 0) : 0),
+                        offsetY: Math.ceil(frameData.spriteSourceSize ? (frameData.spriteSourceSize.y || 0) : 0)
                     }, name);
                     this._spriteCache[name] = sprite;
                     return sprite;
@@ -4620,8 +4956,8 @@ var WOZLLA;
              */
             SpriteAtlas.prototype.load = function (onSuccess, onError) {
                 var _this = this;
-                if (isImageURL(this.src)) {
-                    this._imageSrc = this.src;
+                if (isImageURL(this.fullPath)) {
+                    this._imageSrc = this.fullPath;
                     this._loadImage(function (error, image) {
                         if (error) {
                             onError &amp;&amp; onError(error);
@@ -4640,7 +4976,7 @@ var WOZLLA;
                     });
                 }
                 else {
-                    this._metaSrc = this.src;
+                    this._metaSrc = this.fullPath;
                     this._loadSpriteAtlas(function (error, image, spriteData) {
                         if (error) {
                             onError &amp;&amp; onError(error);
@@ -4675,7 +5011,7 @@ var WOZLLA;
                 var me = this;
                 WOZLLA.utils.Ajax.request({
                     url: me._metaSrc,
-                    contentType: &#39;json&#39;,
+                    dataType: &#39;json&#39;,
                     success: function (data) {
                         var imageSuffix = data.meta.image;
                         var metaFileName = getFileName(me._metaSrc);
@@ -5554,42 +5890,412 @@ var WOZLLA;
         component.RectMask = RectMask;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;../../assets/GLTextureAsset.ts&quot;/&gt;
+/// &lt;reference path=&quot;QuadRenderer.ts&quot;/&gt;
 var WOZLLA;
 (function (WOZLLA) {
-    var utils;
-    (function (utils) {
-        var URL = (function () {
-            function URL() {
+    var component;
+    (function (component) {
+        var CanvasRenderer = (function (_super) {
+            __extends(CanvasRenderer, _super);
+            function CanvasRenderer() {
+                _super.apply(this, arguments);
+                this._canvasSize = new WOZLLA.math.Size(0, 0);
+                this._graphicsDirty = true;
+                this._sizeDirty = true;
             }
-            URL.parse = function (str) {
-                var idx = str.indexOf(&#39;?&#39;);
-                if (idx === -1) {
+            Object.defineProperty(CanvasRenderer.prototype, &quot;canvasSize&quot;, {
+                get: function () {
+                    return this._canvasSize;
+                },
+                set: function (value) {
+                    this._canvasSize = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(CanvasRenderer.prototype, &quot;canvasWidth&quot;, {
+                get: function () {
+                    return this._canvasSize.width;
+                },
+                set: function (value) {
+                    this._canvasSize.width = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(CanvasRenderer.prototype, &quot;canvasHeight&quot;, {
+                get: function () {
+                    return this._canvasSize.height;
+                },
+                set: function (value) {
+                    this._canvasSize.height = value;
+                    this._sizeDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            CanvasRenderer.prototype.destroy = function () {
+                this.destroyCanvas();
+                _super.prototype.destroy.call(this);
+            };
+            CanvasRenderer.prototype.draw = function (context) {
+                throw new Error(&#39;abstract method&#39;);
+            };
+            CanvasRenderer.prototype.render = function (renderer, flags) {
+                if (!this._canvas) {
+                    this.initCanvas();
+                }
+                if (!this._canvas) {
+                    return;
+                }
+                if (this._sizeDirty) {
+                    this.updateCanvas();
+                }
+                if (this._graphicsDirty) {
+                    this.clearCanvas();
+                    this.draw(this._context);
+                    this._graphicsDirty = false;
+                    this.generateCanvasTexture(renderer);
+                }
+                if (this._glTexture) {
+                    _super.prototype.render.call(this, renderer, flags);
+                }
+            };
+            CanvasRenderer.prototype.clearCanvas = function () {
+                this._context.clearRect(0, 0, this._canvasSize.width, this._canvasSize.height);
+            };
+            CanvasRenderer.prototype.initCanvas = function () {
+                if (this._canvasSize.width &lt;= 0 || this._canvasSize.height &lt;= 0) {
+                    return;
+                }
+                this._canvas = document.createElement(&#39;canvas&#39;);
+                this._canvas.width = this._canvasSize.width;
+                this._canvas.height = this._canvasSize.height;
+                this._context = this._canvas.getContext(&#39;2d&#39;);
+                this._sizeDirty = false;
+                this._graphicsDirty = true;
+            };
+            CanvasRenderer.prototype.updateCanvas = function () {
+                if (this._canvasSize.width &lt;= 0 || this._canvasSize.height &lt;= 0) {
+                    this.destroyCanvas();
+                    this._graphicsDirty = true;
+                }
+                this._canvas.width = this._canvasSize.width;
+                this._canvas.height = this._canvasSize.height;
+                this._sizeDirty = false;
+                this._graphicsDirty = true;
+            };
+            CanvasRenderer.prototype.destroyCanvas = function () {
+                this._canvas &amp;&amp; this._canvas.dispose &amp;&amp; this._canvas.dispose();
+                this._context &amp;&amp; this._context.dispose &amp;&amp; this._context.dispose();
+                this._canvas = this._context = null;
+            };
+            CanvasRenderer.prototype.generateCanvasTexture = function (renderer) {
+                if (!this._glTexture) {
+                    this._glTexture = renderer.textureManager.generateTexture(new WOZLLA.assets.HTMLImageDescriptor(this._canvas));
+                    this.setTexture(this._glTexture);
+                }
+                else {
+                    renderer.textureManager.updateTexture(this._glTexture);
+                    this.setTexture(this._glTexture);
+                }
+            };
+            return CanvasRenderer;
+        })(component.QuadRenderer);
+        component.CanvasRenderer = CanvasRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;../renderer/CanvasRenderer.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var PrimitiveRenderer = (function (_super) {
+            __extends(PrimitiveRenderer, _super);
+            function PrimitiveRenderer() {
+                _super.apply(this, arguments);
+                this._primitiveStyle = new PrimitiveStyle();
+            }
+            Object.defineProperty(PrimitiveRenderer.prototype, &quot;primitiveStyle&quot;, {
+                get: function () {
+                    return this._primitiveStyle;
+                },
+                set: function (value) {
+                    this._primitiveStyle = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            PrimitiveRenderer.prototype.render = function (renderer, flags) {
+                var size;
+                if (this._graphicsDirty || this._primitiveStyle.dirty) {
+                    size = this.measurePrimitiveSize();
+                    this.canvasWidth = size.width;
+                    this.canvasHeight = size.height;
+                    this._graphicsDirty = true;
+                    this._primitiveStyle.dirty = false;
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            PrimitiveRenderer.prototype.draw = function (context) {
+                context.save();
+                this.applyPrimitiveStyle(context);
+                this.drawPrimitive(context);
+                context.restore();
+            };
+            PrimitiveRenderer.prototype.applyPrimitiveStyle = function (context) {
+                if (this._primitiveStyle.stroke) {
+                    context.lineWidth = this._primitiveStyle.strokeWidth;
+                    context.strokeStyle = this._primitiveStyle.strokeColor;
+                }
+                if (this._primitiveStyle.fill) {
+                    context.fillStyle = this._primitiveStyle.fillColor;
+                }
+            };
+            PrimitiveRenderer.prototype.drawPrimitive = function (context) {
+                throw new Error(&#39;abstract method&#39;);
+            };
+            PrimitiveRenderer.prototype.measurePrimitiveSize = function () {
+                throw new Error(&#39;abstract method&#39;);
+            };
+            return PrimitiveRenderer;
+        })(component.CanvasRenderer);
+        component.PrimitiveRenderer = PrimitiveRenderer;
+        var PrimitiveStyle = (function () {
+            function PrimitiveStyle() {
+                this.dirty = true;
+                this._stroke = true;
+                this._fill = false;
+                this._strokeColor = &#39;#000000&#39;;
+                this._strokeWidth = 1;
+                this._fillColor = &#39;#FFFFFF&#39;;
+            }
+            Object.defineProperty(PrimitiveStyle.prototype, &quot;stroke&quot;, {
+                get: function () {
+                    return this._stroke;
+                },
+                set: function (value) {
+                    if (value === this._stroke)
+                        return;
+                    this._stroke = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, &quot;strokeColor&quot;, {
+                get: function () {
+                    return this._strokeColor;
+                },
+                set: function (value) {
+                    if (value === this._strokeColor)
+                        return;
+                    this._strokeColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, &quot;strokeWidth&quot;, {
+                get: function () {
+                    return this._strokeWidth;
+                },
+                set: function (value) {
+                    if (value === this._strokeWidth)
+                        return;
+                    this._strokeWidth = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, &quot;fill&quot;, {
+                get: function () {
+                    return this._fill;
+                },
+                set: function (value) {
+                    if (value === this._fill)
+                        return;
+                    this._fill = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(PrimitiveStyle.prototype, &quot;fillColor&quot;, {
+                get: function () {
+                    return this._fillColor;
+                },
+                set: function (value) {
+                    if (value === this._fillColor)
+                        return;
+                    this._fillColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            return PrimitiveStyle;
+        })();
+        component.PrimitiveStyle = PrimitiveStyle;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;PrimitiveRenderer.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var CircleRenderer = (function (_super) {
+            __extends(CircleRenderer, _super);
+            function CircleRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(CircleRenderer.prototype, &quot;circle&quot;, {
+                get: function () {
+                    return this._circle;
+                },
+                set: function (value) {
+                    this._circle = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            CircleRenderer.prototype.drawPrimitive = function (context) {
+                var style = this._primitiveStyle;
+                var centerX = this._canvasSize.width / 2;
+                var centerY = this._canvasSize.height / 2;
+                context.beginPath();
+                context.arc(centerX, centerY, this._circle.radius, 0, 2 * Math.PI);
+                if (style.stroke) {
+                    context.stroke();
+                }
+                if (style.fill) {
+                    context.fill();
+                }
+            };
+            CircleRenderer.prototype.measurePrimitiveSize = function () {
+                var style = this._primitiveStyle;
+                if (!this._circle) {
                     return {
-                        url: str,
-                        params: {}
+                        width: 0,
+                        height: 0
                     };
                 }
-                var search = str.substr(idx + 1);
-                var params = {};
-                var paramStrArr = search.split(&#39;&amp;&#39;);
-                paramStrArr.forEach(function (paramStr) {
-                    if (!paramStr)
-                        return;
-                    var pair = paramStr.split(&#39;=&#39;);
-                    params[pair[0]] = pair[1];
-                });
                 return {
-                    url: str.substr(0, idx),
-                    params: params
+                    width: Math.ceil(this._circle.radius * 2 + (style.stroke ? style.strokeWidth : 0)),
+                    height: Math.ceil(this._circle.radius * 2 + (style.stroke ? style.strokeWidth : 0))
                 };
             };
-            return URL;
+            CircleRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = {
+                    x: this._circle.centerX / this._circle.radius + 0.5,
+                    y: this._circle.centerY / this._circle.radius + 0.5
+                };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                this.setTextureOffset(offset);
+            };
+            return CircleRenderer;
+        })(component.PrimitiveRenderer);
+        component.CircleRenderer = CircleRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;PrimitiveRenderer.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var RectRenderer = (function (_super) {
+            __extends(RectRenderer, _super);
+            function RectRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(RectRenderer.prototype, &quot;rect&quot;, {
+                get: function () {
+                    return this._rect;
+                },
+                set: function (value) {
+                    this._rect = value;
+                    this._graphicsDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            RectRenderer.prototype.drawPrimitive = function (context) {
+                var style = this._primitiveStyle;
+                if (style.stroke) {
+                    context.rect(style.strokeWidth / 2, style.strokeWidth / 2, this._rect.width, this._rect.height);
+                    context.stroke();
+                }
+                else {
+                    context.rect(0, 0, this._rect.width, this._rect.height);
+                }
+                if (style.fill) {
+                    context.fill();
+                }
+            };
+            RectRenderer.prototype.measurePrimitiveSize = function () {
+                var style = this._primitiveStyle;
+                if (!this._rect) {
+                    return {
+                        width: 0,
+                        height: 0
+                    };
+                }
+                return {
+                    width: Math.ceil(this._rect.width + (style.stroke ? style.strokeWidth : 0)),
+                    height: Math.ceil(this._rect.height + (style.stroke ? style.strokeWidth : 0))
+                };
+            };
+            RectRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = {
+                    x: -this._rect.x / this._rect.width,
+                    y: -this._rect.y / this._rect.height
+                };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                this.setTextureOffset(offset);
+            };
+            return RectRenderer;
+        })(component.PrimitiveRenderer);
+        component.RectRenderer = RectRenderer;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var PropertyConverter = (function () {
+            function PropertyConverter() {
+            }
+            PropertyConverter.array2rect = function (arr) {
+                return new WOZLLA.math.Rectangle(arr[0], arr[1], arr[2], arr[3]);
+            };
+            PropertyConverter.array2circle = function (arr) {
+                return new WOZLLA.math.Circle(arr[0], arr[1], arr[2]);
+            };
+            PropertyConverter.json2TextStyle = function (json) {
+                var style = new component.TextStyle();
+                for (var i in json) {
+                    style[i] = json[i];
+                }
+                return style;
+            };
+            PropertyConverter.array2Padding = function (arr) {
+                return new WOZLLA.layout.Padding(arr[0], arr[1], arr[2], arr[3]);
+            };
+            PropertyConverter.array2Margin = function (arr) {
+                return new WOZLLA.layout.Margin(arr[0], arr[1], arr[2], arr[3]);
+            };
+            return PropertyConverter;
         })();
-        utils.URL = URL;
-    })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
+        component.PropertyConverter = PropertyConverter;
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;QuadRenderer.ts&quot;/&gt;
-/// &lt;reference path=&quot;../../utils/URL.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../assets/proxy/SpriteAtlasProxy.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../assets/Sprite.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../assets/SpriteAtlas.ts&quot;/&gt;
@@ -5604,7 +6310,7 @@ var WOZLLA;
             __extends(SpriteRenderer, _super);
             function SpriteRenderer() {
                 _super.call(this);
-                this._spriteProxy = new WOZLLA.assets.proxy.SpriteProxy(this);
+                this._spriteProxy = new WOZLLA.assets.proxy.SpriteAtlasProxy(this);
             }
             Object.defineProperty(SpriteRenderer.prototype, &quot;color&quot;, {
                 get: function () {
@@ -5662,6 +6368,8 @@ var WOZLLA;
                 },
                 set: function (sprite) {
                     var oldSprite = this._sprite;
+                    if (oldSprite === sprite)
+                        return;
                     this._sprite = sprite;
                     if (!sprite) {
                         this.setTexture(null);
@@ -5687,13 +6395,24 @@ var WOZLLA;
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(SpriteRenderer.prototype, &quot;spriteAtlasSrc&quot;, {
+            Object.defineProperty(SpriteRenderer.prototype, &quot;imageSrc&quot;, {
                 get: function () {
-                    return this._spriteSrc;
+                    return this._spriteAtlasSrc;
                 },
                 set: function (value) {
-                    this._spriteSrc = value;
-                    this._spriteProxy.setDirty();
+                    this.spriteAtlasSrc = value;
+                    this.spriteName = null;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SpriteRenderer.prototype, &quot;spriteAtlasSrc&quot;, {
+                get: function () {
+                    return this._spriteAtlasSrc;
+                },
+                set: function (value) {
+                    this._spriteAtlasSrc = value;
+                    this._spriteProxy.setAssetSrc(value);
                 },
                 enumerable: true,
                 configurable: true
@@ -5704,19 +6423,22 @@ var WOZLLA;
                 },
                 set: function (value) {
                     this._spriteName = value;
-                    this._spriteProxy.setDirty();
+                    this.sprite = this._spriteProxy.getSprite(value);
                 },
                 enumerable: true,
                 configurable: true
             });
-            SpriteRenderer.prototype.getSpriteAtlasSrc = function () {
-                return this._spriteSrc;
+            SpriteRenderer.prototype.destroy = function () {
+                this._spriteProxy.onDestroy();
+                _super.prototype.destroy.call(this);
             };
-            SpriteRenderer.prototype.getSpriteName = function () {
-                return this._spriteName;
-            };
-            SpriteRenderer.prototype.onSpriteLoaded = function (sprite) {
-                this._sprite = sprite;
+            SpriteRenderer.prototype.onAssetLoaded = function (asset) {
+                if (asset) {
+                    this.sprite = asset.getSprite(this._spriteName);
+                }
+                else {
+                    this.sprite = null;
+                }
             };
             SpriteRenderer.prototype.loadAssets = function (callback) {
                 this._spriteProxy.loadAsset(callback);
@@ -5728,12 +6450,165 @@ var WOZLLA;
             name: &quot;SpriteRenderer&quot;,
             properties: [{
                 name: &#39;color&#39;,
-                type: &#39;int&#39;
+                type: &#39;int&#39;,
+                defaultValue: 0xFFFFFF
             }, {
-                name: &#39;spriteSrc&#39;,
+                name: &#39;alpha&#39;,
+                type: &#39;int&#39;,
+                defaultValue: 1
+            }, {
+                name: &#39;spriteAtlasSrc&#39;,
+                type: &#39;string&#39;
+            }, {
+                name: &#39;spriteName&#39;,
+                type: &#39;string&#39;
+            }, {
+                name: &#39;imageSrc&#39;,
                 type: &#39;string&#39;
             }]
         });
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;SpriteRenderer.ts&quot;/&gt;
+/// &lt;reference path=&quot;../../utils/Tween.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var AnimationRenderer = (function (_super) {
+            __extends(AnimationRenderer, _super);
+            function AnimationRenderer() {
+                _super.apply(this, arguments);
+                this._frameNumDirty = true;
+                this._autoOffset = true;
+                this._playMode = AnimationRenderer.MODE_NONLOOP;
+                this._playing = false;
+            }
+            Object.defineProperty(AnimationRenderer.prototype, &quot;autoOffset&quot;, {
+                get: function () {
+                    return this._autoOffset;
+                },
+                set: function (value) {
+                    this._autoOffset = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, &quot;frameNum&quot;, {
+                get: function () {
+                    return this._frameNum;
+                },
+                set: function (value) {
+                    var value = Math.floor(value);
+                    if (this._frameNum === value)
+                        return;
+                    this._frameNum = value;
+                    this._frameNumDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, &quot;duration&quot;, {
+                get: function () {
+                    return this._duration;
+                },
+                set: function (value) {
+                    this._duration = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, &quot;playMode&quot;, {
+                get: function () {
+                    return this._playMode;
+                },
+                set: function (value) {
+                    this._playMode = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(AnimationRenderer.prototype, &quot;frameLength&quot;, {
+                get: function () {
+                    return this._spriteProxy.getFrameLength();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            AnimationRenderer.prototype.play = function (duration) {
+                if (duration === void 0) { duration = this._duration; }
+                if (this.frameLength &lt;= 0)
+                    return;
+                this._duration = duration;
+                this._playing = true;
+                this._frameNum = 0;
+                if (this._playTween) {
+                    this._playTween.setPaused(true);
+                }
+                this._playTween = WOZLLA.utils.Tween.get(this).to({
+                    frameNum: this.frameLength
+                }, duration);
+            };
+            AnimationRenderer.prototype.pause = function () {
+                if (this._playing) {
+                    this._playTween.setPaused(true);
+                    this._playing = false;
+                }
+            };
+            AnimationRenderer.prototype.resume = function () {
+                if (!this._playing &amp;&amp; this._playTween) {
+                    this._playTween.setPaused(false);
+                    this._playing = true;
+                }
+            };
+            AnimationRenderer.prototype.stop = function () {
+                if (this._playing || this._playTween) {
+                    this._playTween.setPaused(false);
+                    this._playTween = null;
+                }
+            };
+            AnimationRenderer.prototype.render = function (renderer, flags) {
+                if (this._frameNumDirty) {
+                    this._frameNumDirty = false;
+                    this.updateAnimationFrame();
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            AnimationRenderer.prototype.updateAnimationFrame = function () {
+                var frame;
+                var frameLength = this.frameLength;
+                if (frameLength === 0) {
+                    this.sprite = null;
+                }
+                else {
+                    if (this._frameNum &gt;= frameLength) {
+                        if (this._playMode === AnimationRenderer.MODE_LOOP) {
+                            this.play();
+                        }
+                        else {
+                            this._frameNum = frameLength - 1;
+                            this.dispatchEvent(new WOZLLA.event.Event(&#39;animationend&#39;));
+                            this.stop();
+                        }
+                    }
+                    this.sprite = this._spriteProxy.getSprite(this._frameNum);
+                    frame = this.sprite.frame;
+                    if (this._autoOffset) {
+                        this.spriteOffset = {
+                            x: -frame.offsetX / frame.width || 0,
+                            y: -frame.offsetY / frame.height || 0
+                        };
+                    }
+                    this.dispatchEvent(new WOZLLA.event.Event(&#39;framechanged&#39;, false, {
+                        frame: this._frameNum
+                    }));
+                }
+            };
+            AnimationRenderer.MODE_LOOP = &#39;loop&#39;;
+            AnimationRenderer.MODE_NONLOOP = &#39;nonloop&#39;;
+            return AnimationRenderer;
+        })(component.SpriteRenderer);
+        component.AnimationRenderer = AnimationRenderer;
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;SpriteRenderer.ts&quot;/&gt;
@@ -6002,7 +6877,348 @@ var WOZLLA;
         component.NinePatchRenderer = NinePatchRenderer;
         WOZLLA.Component.register(NinePatchRenderer, {
             name: &quot;NinePatchRenderer&quot;,
-            properties: []
+            properties: [
+                WOZLLA.Component.extendConfig(component.SpriteRenderer),
+                {
+                    name: &#39;patch&#39;,
+                    type: &#39;rect&#39;,
+                    defaultValue: [0, 0, 0, 0],
+                    convert: component.PropertyConverter.array2rect
+                },
+                {
+                    name: &#39;renderRegion&#39;,
+                    type: &#39;rect&#39;,
+                    defaultValue: [0, 0, 0, 0],
+                    convert: component.PropertyConverter.array2rect
+                }
+            ]
+        });
+    })(component = WOZLLA.component || (WOZLLA.component = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;../renderer/CanvasRenderer.ts&quot;/&gt;
+/// &lt;reference path=&quot;../PropertyConverter.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var component;
+    (function (component) {
+        var helpCanvas = document.createElement(&#39;canvas&#39;);
+        helpCanvas.width = 1;
+        helpCanvas.height = 1;
+        var helpContext = helpCanvas.getContext(&#39;2d&#39;);
+        var TextRenderer = (function (_super) {
+            __extends(TextRenderer, _super);
+            function TextRenderer() {
+                _super.apply(this, arguments);
+                this._textDirty = true;
+                this._textStyle = new TextStyle();
+            }
+            TextRenderer.measureText = function (style, text) {
+                var measuredWidth, measuredHeight;
+                var extendSize;
+                helpContext.font = style.font;
+                measuredWidth = Math.ceil(helpContext.measureText(text).width);
+                measuredHeight = Math.ceil(helpContext.measureText(&quot;M&quot;).width * 1.2);
+                if (style.shadow || style.stroke) {
+                    extendSize = Math.max(style.strokeWidth, Math.abs(style.shadowOffsetX), Math.abs(style.shadowOffsetY));
+                    measuredWidth += extendSize * 2;
+                    measuredHeight += extendSize * 2 + 4;
+                }
+                measuredWidth = Math.ceil(measuredWidth);
+                measuredHeight = Math.ceil(measuredHeight);
+                if (measuredWidth % 2 !== 0) {
+                    measuredWidth += 1;
+                }
+                if (measuredHeight % 2 !== 0) {
+                    measuredHeight += 1;
+                }
+                return {
+                    width: measuredWidth,
+                    height: measuredHeight
+                };
+            };
+            Object.defineProperty(TextRenderer.prototype, &quot;text&quot;, {
+                get: function () {
+                    return this._text;
+                },
+                set: function (value) {
+                    if (typeof value !== &#39;string&#39;) {
+                        value = value + &#39;&#39;;
+                    }
+                    if (value === this._text)
+                        return;
+                    this._text = value;
+                    this._textDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, &quot;textStyle&quot;, {
+                get: function () {
+                    return this._textStyle;
+                },
+                set: function (value) {
+                    this._textStyle = value;
+                    this._textDirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, &quot;textWidth&quot;, {
+                get: function () {
+                    return this._canvasSize.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextRenderer.prototype, &quot;textHeight&quot;, {
+                get: function () {
+                    return this._canvasSize.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            TextRenderer.prototype.render = function (renderer, flags) {
+                var size;
+                if (this._textDirty || this._textStyle.dirty) {
+                    size = this.measureTextSize();
+                    this.canvasWidth = size.width;
+                    this.canvasHeight = size.height;
+                    this._textStyle.dirty = false;
+                    this._textDirty = false;
+                    this._graphicsDirty = true;
+                }
+                _super.prototype.render.call(this, renderer, flags);
+            };
+            TextRenderer.prototype.draw = function (context) {
+                this.drawText(context, this._canvasSize.width, this._canvasSize.height);
+            };
+            TextRenderer.prototype.drawText = function (context, measuredWidth, measuredHeight) {
+                context.save();
+                context.font = this._textStyle.font;
+                context.textAlign = &#39;center&#39;;
+                context.textBaseline = &#39;middle&#39;;
+                if (this._textStyle.shadow &amp;&amp; (this._textStyle.shadowOffsetX &gt; 0 || this._textStyle.shadowOffsetY &gt; 0)) {
+                    context.fillStyle = this._textStyle.shadowColor;
+                    context.fillText(this._text, measuredWidth / 2 + this._textStyle.shadowOffsetX, measuredHeight / 2 + this._textStyle.shadowOffsetY);
+                }
+                if (this._textStyle.stroke &amp;&amp; this._textStyle.strokeWidth &gt; 0) {
+                    context.strokeStyle = this._textStyle.strokeColor;
+                    context.lineWidth = this._textStyle.strokeWidth;
+                    context.strokeText(this._text, measuredWidth / 2, measuredHeight / 2);
+                }
+                context.fillStyle = this._textStyle.color;
+                context.fillText(this._text, measuredWidth / 2, measuredHeight / 2);
+                context.restore();
+            };
+            TextRenderer.prototype.measureTextSize = function () {
+                var measureSize;
+                if (!this._text) {
+                    measureSize = {
+                        width: 0,
+                        height: 0
+                    };
+                }
+                else {
+                    measureSize = TextRenderer.measureText(this._textStyle, this._text);
+                }
+                return measureSize;
+            };
+            TextRenderer.prototype.generateCanvasTexture = function (renderer) {
+                var offset = { x: 0, y: 0 };
+                _super.prototype.generateCanvasTexture.call(this, renderer);
+                if (this._textStyle.align === TextStyle.CENTER) {
+                    offset.x = 0.5;
+                }
+                else if (this._textStyle.align === TextStyle.END) {
+                    offset.x = 1;
+                }
+                if (this._textStyle.baseline === TextStyle.MIDDLE) {
+                    offset.y = 0.5;
+                }
+                else if (this._textStyle.baseline === TextStyle.BOTTOM) {
+                    offset.y = 1;
+                }
+                this.setTextureOffset(offset);
+            };
+            return TextRenderer;
+        })(component.CanvasRenderer);
+        component.TextRenderer = TextRenderer;
+        var TextStyle = (function () {
+            function TextStyle() {
+                this.dirty = true;
+                this._font = &#39;normal 24px Arial&#39;;
+                this._color = &#39;#000000&#39;;
+                this._shadow = false;
+                this._shadowColor = &#39;#000000&#39;;
+                this._shadowOffsetX = 0;
+                this._shadowOffsetY = 0;
+                this._stroke = false;
+                this._strokeColor = &#39;#000000&#39;;
+                this._strokeWidth = 0;
+                this._align = TextStyle.START;
+                this._baseline = TextStyle.TOP;
+            }
+            Object.defineProperty(TextStyle.prototype, &quot;font&quot;, {
+                get: function () {
+                    return this._font;
+                },
+                set: function (value) {
+                    if (value === this._font)
+                        return;
+                    this._font = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;color&quot;, {
+                get: function () {
+                    return this._color;
+                },
+                set: function (value) {
+                    if (value === this._color)
+                        return;
+                    this._color = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;shadow&quot;, {
+                get: function () {
+                    return this._shadow;
+                },
+                set: function (value) {
+                    if (value === this._shadow)
+                        return;
+                    this._shadow = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;shadowColor&quot;, {
+                get: function () {
+                    return this._shadowColor;
+                },
+                set: function (value) {
+                    this._shadowColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;shadowOffsetX&quot;, {
+                get: function () {
+                    return this._shadowOffsetX;
+                },
+                set: function (value) {
+                    if (value === this._shadowOffsetX)
+                        return;
+                    this._shadowOffsetX = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;shadowOffsetY&quot;, {
+                get: function () {
+                    return this._shadowOffsetY;
+                },
+                set: function (value) {
+                    if (value === this._shadowOffsetY)
+                        return;
+                    this._shadowOffsetY = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;stroke&quot;, {
+                get: function () {
+                    return this._stroke;
+                },
+                set: function (value) {
+                    if (value === this._stroke)
+                        return;
+                    this._stroke = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;strokeColor&quot;, {
+                get: function () {
+                    return this._strokeColor;
+                },
+                set: function (value) {
+                    if (value === this._strokeColor)
+                        return;
+                    this._strokeColor = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;strokeWidth&quot;, {
+                get: function () {
+                    return this._strokeWidth;
+                },
+                set: function (value) {
+                    if (value === this._strokeWidth)
+                        return;
+                    this._strokeWidth = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;align&quot;, {
+                get: function () {
+                    return this._align;
+                },
+                set: function (value) {
+                    if (value === this._align)
+                        return;
+                    this._align = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TextStyle.prototype, &quot;baseline&quot;, {
+                get: function () {
+                    return this._baseline;
+                },
+                set: function (value) {
+                    if (value === this._baseline)
+                        return;
+                    this._baseline = value;
+                    this.dirty = true;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            TextStyle.START = &#39;start&#39;;
+            TextStyle.CENTER = &#39;center&#39;;
+            TextStyle.END = &#39;end&#39;;
+            TextStyle.TOP = &#39;top&#39;;
+            TextStyle.MIDDLE = &#39;middle&#39;;
+            TextStyle.BOTTOM = &#39;bottom&#39;;
+            return TextStyle;
+        })();
+        component.TextStyle = TextStyle;
+        WOZLLA.Component.register(TextRenderer, {
+            name: &#39;TextRenderer&#39;,
+            properties: [{
+                name: &#39;text&#39;,
+                type: &#39;string&#39;
+            }, {
+                name: &#39;style&#39;,
+                type: &#39;object&#39;,
+                convert: component.PropertyConverter.json2TextStyle,
+                editor: &#39;textStyle&#39;
+            }]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
@@ -6076,7 +7292,21 @@ var WOZLLA;
             function JSONXBuilder() {
                 this.doLoad = false;
                 this.doInit = false;
+                this.async = true;
+                this.uuidMap = {};
             }
+            JSONXBuilder.create = function () {
+                if (JSONXBuilder.Factory) {
+                    return (new (JSONXBuilder.Factory)());
+                }
+                return new JSONXBuilder();
+            };
+            JSONXBuilder.prototype.getByUUID = function (uuid) {
+                return this.uuidMap[uuid];
+            };
+            JSONXBuilder.prototype.setSync = function () {
+                this.async = false;
+            };
             JSONXBuilder.prototype.instantiateWithSrc = function (src, callback) {
                 if (callback === void 0) { callback = emptyCallback; }
                 this.src = src;
@@ -6142,8 +7372,10 @@ var WOZLLA;
                 var _this = this;
                 if (this.src &amp;&amp; !this.data) {
                     WOZLLA.utils.Ajax.request({
-                        url: this.src,
-                        contentType: &#39;json&#39;,
+                        url: WOZLLA.Director.getInstance().assetLoader.getBaseDir() + &#39;/&#39; + this.src,
+                        dataType: &#39;json&#39;,
+                        async: this.async,
+                        withCredentials: true,
                         success: function (data) {
                             _this.data = data;
                             callback &amp;&amp; callback();
@@ -6168,6 +7400,8 @@ var WOZLLA;
             JSONXBuilder.prototype._newGameObject = function (data, callback) {
                 var _this = this;
                 var gameObj = new WOZLLA.GameObject(data.rect);
+                gameObj._uuid = data.uuid;
+                this.uuidMap[data.uuid] = gameObj;
                 gameObj.id = data.id;
                 gameObj.name = data.name;
                 gameObj.active = data.active;
@@ -6177,7 +7411,7 @@ var WOZLLA;
                 var components = data.components;
                 if (components &amp;&amp; components.length &gt; 0) {
                     components.forEach(function (compData) {
-                        gameObj.addComponent(_this._newComponent(compData));
+                        gameObj.addComponent(_this._newComponent(compData, gameObj));
                     });
                 }
                 var createdChildCount = 0;
@@ -6217,6 +7451,8 @@ var WOZLLA;
                         _this.err = err;
                     }
                     else if (root) {
+                        root._uuid = data.uuid;
+                        _this.uuidMap[data.uuid] = root;
                         root.name = data.name;
                         root.id = data.id;
                         root.active = data.active;
@@ -6227,18 +7463,41 @@ var WOZLLA;
                     callback(root);
                 });
             };
-            JSONXBuilder.prototype._newComponent = function (compData) {
+            JSONXBuilder.prototype._newComponent = function (compData, gameObj) {
                 var component = WOZLLA.Component.create(compData.name);
                 var config = WOZLLA.Component.getConfig(compData.name);
-                config.properties.forEach(function (prop) {
-                    var value = compData.properties[prop.name];
-                    component[prop.name] = typeof value === &#39;undefined&#39; ? prop.defaultValue : value;
-                });
+                component._uuid = compData.uuid;
+                this.uuidMap[compData.uuid] = component;
+                component.gameObject = gameObj;
+                this._applyComponentProperties(component, config.properties, compData);
                 return component;
             };
+            JSONXBuilder.prototype._applyComponentProperties = function (component, properties, compData) {
+                var _this = this;
+                if (properties &amp;&amp; properties.length &gt; 0) {
+                    properties.forEach(function (prop) {
+                        if (prop.group) {
+                            _this._applyComponentProperties(component, prop.properties, compData);
+                        }
+                        else if (prop.extend) {
+                            var config = WOZLLA.Component.getConfig(prop.extend);
+                            if (config) {
+                                _this._applyComponentProperties(component, config.properties, compData);
+                            }
+                        }
+                        else {
+                            var value = compData.properties[prop.name];
+                            value = value == void 0 ? prop.defaultValue : value;
+                            if (prop.convert &amp;&amp; value) {
+                                value = prop.convert(value);
+                            }
+                            component[prop.name] = value;
+                        }
+                    });
+                }
+            };
             JSONXBuilder.prototype._loadAssets = function (callback) {
-                // TODO how to load assets? the key.
-                callback &amp;&amp; callback();
+                this.root.loadAssets(callback);
             };
             JSONXBuilder.prototype._init = function () {
                 this.root.init();
@@ -6247,6 +7506,326 @@ var WOZLLA;
         })();
         jsonx.JSONXBuilder = JSONXBuilder;
     })(jsonx = WOZLLA.jsonx || (WOZLLA.jsonx = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var LayoutBase = (function (_super) {
+            __extends(LayoutBase, _super);
+            function LayoutBase() {
+                _super.apply(this, arguments);
+                this._layoutRequired = true;
+            }
+            LayoutBase.prototype.init = function () {
+                _super.prototype.init.call(this);
+                this.gameObject.addListenerScope(&#39;childadd&#39;, this.onChildAdd, this);
+                this.gameObject.addListenerScope(&#39;childremove&#39;, this.onChildRemove, this);
+                this.requestLayout();
+            };
+            LayoutBase.prototype.destroy = function () {
+                this.gameObject.removeListenerScope(&#39;childadd&#39;, this.onChildAdd, this);
+                this.gameObject.removeListenerScope(&#39;childremove&#39;, this.onChildRemove, this);
+                _super.prototype.destroy.call(this);
+            };
+            LayoutBase.prototype.doLayout = function () {
+            };
+            LayoutBase.prototype.requestLayout = function () {
+                this._layoutRequired = true;
+            };
+            LayoutBase.prototype.update = function () {
+                if (this._layoutRequired) {
+                    this._layoutRequired = false;
+                    this.doLayout();
+                }
+            };
+            LayoutBase.prototype.onChildAdd = function (e) {
+                this.requestLayout();
+            };
+            LayoutBase.prototype.onChildRemove = function (e) {
+                alert(&#39;remove&#39;);
+                this.requestLayout();
+            };
+            return LayoutBase;
+        })(WOZLLA.Behaviour);
+        layout.LayoutBase = LayoutBase;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var math;
+    (function (math) {
+<span id='WOZLLA-math-Size'>        /**
+</span>         * @class WOZLLA.math.Size
+         * a util class contains width and height properties
+         */
+        var Size = (function () {
+<span id='WOZLLA-math-Size-method-constructor'>            /**
+</span>             * @method constructor
+             * create a new instance of Size
+             * @member WOZLLA.math.Size
+             * @param {number} width
+             * @param {number} height
+             */
+            function Size(width, height) {
+<span id='WOZLLA-math-Size-property-width'>                /**
+</span>                 * @property {number} width
+                 * get or set width of this object
+                 * @member WOZLLA.math.Size
+                 */
+                this.width = width;
+<span id='WOZLLA-math-Size-property-height'>                /**
+</span>                 * @property {number} height
+                 * get or set height of this object
+                 * @member WOZLLA.math.Size
+                 */
+                this.height = height;
+            }
+<span id='WOZLLA-math-Size-method-toString'>            /**
+</span>             * get simple description of this object
+             * @returns {string}
+             */
+            Size.prototype.toString = function () {
+                return &#39;Size[&#39; + this.width + &#39;,&#39; + this.height + &#39;]&#39;;
+            };
+            return Size;
+        })();
+        math.Size = Size;
+    })(math = WOZLLA.math || (WOZLLA.math = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;LayoutBase.ts&quot;/&gt;
+/// &lt;reference path=&quot;../math/Size.ts&quot;/&gt;
+/// &lt;reference path=&quot;../component/PropertyConverter.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var helpSize = new WOZLLA.math.Size(0, 0);
+        var Grid = (function (_super) {
+            __extends(Grid, _super);
+            function Grid() {
+                _super.apply(this, arguments);
+            }
+            Grid.prototype.listRequiredComponents = function () {
+                return [WOZLLA.RectTransform];
+            };
+            Object.defineProperty(Grid.prototype, &quot;padding&quot;, {
+                get: function () {
+                    return this._padding;
+                },
+                set: function (padding) {
+                    if (this._padding &amp;&amp; this._padding.equals(padding))
+                        return;
+                    this._padding = padding;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Grid.prototype, &quot;itemMargin&quot;, {
+                get: function () {
+                    return this._itemMargin;
+                },
+                set: function (margin) {
+                    if (this._itemMargin &amp;&amp; this._itemMargin.equals(margin))
+                        return;
+                    this._itemMargin = margin;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Grid.prototype.doLayout = function () {
+                var padding = this._padding;
+                var margin = this._itemMargin;
+                var children = this.gameObject.rawChildren;
+                var col = 0;
+                var row = 0;
+                var rowHeight = 0;
+                var x = padding.left;
+                var y = padding.top;
+                var child;
+                var rect = this.gameObject.rectTransform;
+                for (var i = 0, len = children.length; i &lt; len; i++) {
+                    child = children[i];
+                    this.measureChildSize(child, i, helpSize);
+                    // measure x, y
+                    x += margin.left;
+                    y += margin.top;
+                    // resolve new row
+                    if (x + helpSize.width + margin.right + padding.right &gt; rect.width) {
+                        row++;
+                        col = 0;
+                        y += margin.bottom;
+                        y += helpSize.height;
+                        x = padding.left + margin.left;
+                    }
+                    // apply position
+                    if (child.rectTransform) {
+                        child.rectTransform.px = x;
+                        child.rectTransform.py = y;
+                    }
+                    else {
+                        child.transform.x = x;
+                        child.transform.y = y;
+                    }
+                    // determine row height
+                    if (helpSize.height &gt; rowHeight) {
+                        rowHeight = helpSize.height;
+                    }
+                    // grow col num
+                    x += margin.right + helpSize.width;
+                    col++;
+                }
+            };
+            Grid.prototype.measureChildSize = function (child, idx, size) {
+                var rectTransform = child.rectTransform;
+                if (!rectTransform) {
+                    size.height = size.width = 0;
+                }
+                else {
+                    size.width = rectTransform.width;
+                    size.height = rectTransform.height;
+                }
+            };
+            return Grid;
+        })(layout.LayoutBase);
+        layout.Grid = Grid;
+        WOZLLA.Component.register(Grid, {
+            name: &#39;Grid&#39;,
+            properties: [{
+                name: &#39;padding&#39;,
+                type: &#39;Padding&#39;,
+                convert: WOZLLA.component.PropertyConverter.array2Padding,
+                defaultValue: [0, 0, 0, 0]
+            }, {
+                name: &#39;itemMargin&#39;,
+                type: &#39;Margin&#39;,
+                convert: WOZLLA.component.PropertyConverter.array2Margin,
+                defaultValue: [0, 0, 0, 0]
+            }]
+        });
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var Margin = (function () {
+            function Margin(top, left, bottom, right) {
+                this.top = top;
+                this.left = left;
+                this.bottom = bottom;
+                this.right = right;
+            }
+            Margin.prototype.equals = function (padding) {
+                return this.top === padding.top &amp;&amp; this.bottom === padding.bottom &amp;&amp; this.right === padding.right &amp;&amp; this.left === padding.left;
+            };
+            return Margin;
+        })();
+        layout.Margin = Margin;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var Padding = (function () {
+            function Padding(top, left, bottom, right) {
+                this.top = top;
+                this.left = left;
+                this.bottom = bottom;
+                this.right = right;
+            }
+            Padding.prototype.equals = function (padding) {
+                return this.top === padding.top &amp;&amp; this.bottom === padding.bottom &amp;&amp; this.right === padding.right &amp;&amp; this.left === padding.left;
+            };
+            return Padding;
+        })();
+        layout.Padding = Padding;
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
+})(WOZLLA || (WOZLLA = {}));
+/// &lt;reference path=&quot;LayoutBase.ts&quot;/&gt;
+/// &lt;reference path=&quot;../component/PropertyConverter.ts&quot;/&gt;
+var WOZLLA;
+(function (WOZLLA) {
+    var layout;
+    (function (layout) {
+        var VBox = (function (_super) {
+            __extends(VBox, _super);
+            function VBox() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(VBox.prototype, &quot;padding&quot;, {
+                get: function () {
+                    return this._padding;
+                },
+                set: function (padding) {
+                    if (this._padding &amp;&amp; this._padding.equals(padding))
+                        return;
+                    this._padding = padding;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(VBox.prototype, &quot;itemMargin&quot;, {
+                get: function () {
+                    return this._itemMargin;
+                },
+                set: function (margin) {
+                    if (this._itemMargin === margin)
+                        return;
+                    this._itemMargin = margin;
+                    this.requestLayout();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            VBox.prototype.doLayout = function () {
+                var _this = this;
+                var padding = this._padding;
+                var y = padding.top;
+                this.gameObject.eachChild(function (child, idx) {
+                    var rectTransform = child.rectTransform;
+                    if (!rectTransform) {
+                        child.transform.x = padding.left;
+                        child.transform.y = y;
+                    }
+                    else {
+                        rectTransform.anchorMode = WOZLLA.RectTransform.ANCHOR_LEFT | WOZLLA.RectTransform.ANCHOR_TOP;
+                        rectTransform.px = padding.left;
+                        rectTransform.py = y;
+                    }
+                    y += _this._itemMargin + _this.measureChildHeight(child, idx);
+                });
+            };
+            VBox.prototype.measureChildHeight = function (child, idx) {
+                var rectTransform = child.rectTransform;
+                if (!rectTransform) {
+                    return 0;
+                }
+                else {
+                    return rectTransform.height;
+                }
+            };
+            return VBox;
+        })(layout.LayoutBase);
+        layout.VBox = VBox;
+        WOZLLA.Component.register(VBox, {
+            name: &#39;VBox&#39;,
+            properties: [{
+                name: &#39;padding&#39;,
+                type: &#39;Padding&#39;,
+                convert: WOZLLA.component.PropertyConverter.array2Padding,
+                defaultValue: [0, 0, 0, 0]
+            }, {
+                name: &#39;itemMargin&#39;,
+                type: &#39;int&#39;,
+                defaultValue: 0
+            }]
+        });
+    })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
 (function (WOZLLA) {
@@ -6310,48 +7889,6 @@ var WOZLLA;
             }
             MathUtils.rectIntersect2 = rectIntersect2;
         })(MathUtils = math.MathUtils || (math.MathUtils = {}));
-    })(math = WOZLLA.math || (WOZLLA.math = {}));
-})(WOZLLA || (WOZLLA = {}));
-var WOZLLA;
-(function (WOZLLA) {
-    var math;
-    (function (math) {
-<span id='WOZLLA-math-Size'>        /**
-</span>         * @class WOZLLA.math.Size
-         * a util class contains width and height properties
-         */
-        var Size = (function () {
-<span id='WOZLLA-math-Size-method-constructor'>            /**
-</span>             * @method constructor
-             * create a new instance of Size
-             * @member WOZLLA.math.Size
-             * @param {number} width
-             * @param {number} height
-             */
-            function Size(width, height) {
-<span id='WOZLLA-math-Size-property-width'>                /**
-</span>                 * @property {number} width
-                 * get or set width of this object
-                 * @member WOZLLA.math.Size
-                 */
-                this.width = width;
-<span id='WOZLLA-math-Size-property-height'>                /**
-</span>                 * @property {number} height
-                 * get or set height of this object
-                 * @member WOZLLA.math.Size
-                 */
-                this.height = height;
-            }
-<span id='WOZLLA-math-Size-method-toString'>            /**
-</span>             * get simple description of this object
-             * @returns {string}
-             */
-            Size.prototype.toString = function () {
-                return &#39;Size[&#39; + this.width + &#39;,&#39; + this.height + &#39;]&#39;;
-            };
-            return Size;
-        })();
-        math.Size = Size;
     })(math = WOZLLA.math || (WOZLLA.math = {}));
 })(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
@@ -6581,28 +8118,18 @@ var WOZLLA;
         var StateWidget = (function (_super) {
             __extends(StateWidget, _super);
             function StateWidget() {
-                _super.apply(this, arguments);
+                _super.call(this);
                 this._stateMachine = new WOZLLA.utils.StateMachine();
+                this.initStates();
             }
-            Object.defineProperty(StateWidget.prototype, &quot;spriteAtlas&quot;, {
-                get: function () {
-                    return this._spriteAtlas;
-                },
-                set: function (value) {
-                    this._spriteAtlas = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            StateWidget.prototype.listRequiredComponents = function () {
-                return [WOZLLA.component.SpriteRenderer];
-            };
             StateWidget.prototype.init = function () {
                 var _this = this;
                 this._stateMachine.addListener(StateMachine.INIT, function (e) { return _this.onStateChange(e); });
                 this._stateMachine.addListener(StateMachine.CHANGE, function (e) { return _this.onStateChange(e); });
-                this._spriteRenderer = this.gameObject.renderer;
+                this._stateMachine.init();
                 _super.prototype.init.call(this);
+            };
+            StateWidget.prototype.initStates = function () {
             };
             StateWidget.prototype.getStateSpriteName = function (state) {
                 return this._stateMachine.getStateData(state, &#39;spriteName&#39;);
@@ -6611,10 +8138,10 @@ var WOZLLA;
                 this._stateMachine.setStateData(state, &#39;spriteName&#39;, spriteName);
             };
             StateWidget.prototype.onStateChange = function (e) {
-                this._spriteRenderer.sprite = this._spriteAtlas.getSprite(this.getStateSpriteName(e.data.state));
+                this.spriteName = this.getStateSpriteName(e.data.state);
             };
             return StateWidget;
-        })(WOZLLA.Component);
+        })(WOZLLA.component.SpriteRenderer);
         ui.StateWidget = StateWidget;
     })(ui = WOZLLA.ui || (WOZLLA.ui = {}));
 })(WOZLLA || (WOZLLA = {}));
@@ -6630,10 +8157,7 @@ var WOZLLA;
         var Button = (function (_super) {
             __extends(Button, _super);
             function Button() {
-                _super.call(this);
-                this._stateMachine.defineState(Button.STATE_NORMAL, true);
-                this._stateMachine.defineState(Button.STATE_DISABLED);
-                this._stateMachine.defineState(Button.STATE_PRESSED);
+                _super.apply(this, arguments);
             }
             Object.defineProperty(Button.prototype, &quot;normalSpriteName&quot;, {
                 get: function () {
@@ -6670,7 +8194,6 @@ var WOZLLA;
                 this.gameObject.addListener(&#39;touch&#39;, function (e) { return _this.onTouch(e); });
                 this.gameObject.addListener(&#39;release&#39;, function (e) { return _this.onRelease(e); });
                 this.gameObject.addListener(&#39;tap&#39;, function (e) { return _this.onTap(e); });
-                this._stateMachine.init();
                 _super.prototype.init.call(this);
             };
             Button.prototype.destroy = function () {
@@ -6684,6 +8207,11 @@ var WOZLLA;
                 if (enabled === void 0) { enabled = true; }
                 this._stateMachine.changeState(enabled ? Button.STATE_NORMAL : Button.STATE_DISABLED);
                 this._gameObject.touchable = enabled;
+            };
+            Button.prototype.initStates = function () {
+                this._stateMachine.defineState(Button.STATE_NORMAL, true);
+                this._stateMachine.defineState(Button.STATE_DISABLED);
+                this._stateMachine.defineState(Button.STATE_PRESSED);
             };
             Button.prototype.onTouch = function (e) {
                 this._stateMachine.changeState(Button.STATE_PRESSED);
@@ -6713,10 +8241,7 @@ var WOZLLA;
         var CheckBox = (function (_super) {
             __extends(CheckBox, _super);
             function CheckBox() {
-                _super.call(this);
-                this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
-                this._stateMachine.defineState(CheckBox.STATE_DISABLED);
-                this._stateMachine.defineState(CheckBox.STATE_CHECKED);
+                _super.apply(this, arguments);
             }
             Object.defineProperty(CheckBox.prototype, &quot;uncheckedSpriteName&quot;, {
                 get: function () {
@@ -6751,7 +8276,6 @@ var WOZLLA;
             CheckBox.prototype.init = function () {
                 var _this = this;
                 this._gameObject.addListener(&#39;tap&#39;, function (e) { return _this.onTap(e); });
-                this._stateMachine.init();
                 _super.prototype.init.call(this);
             };
             CheckBox.prototype.destroy = function () {
@@ -6765,6 +8289,11 @@ var WOZLLA;
                 if (enabled === void 0) { enabled = true; }
                 this._stateMachine.changeState(enabled ? CheckBox.STATE_UNCHECKED : CheckBox.STATE_DISABLED);
                 this._gameObject.touchable = enabled;
+            };
+            CheckBox.prototype.initStates = function () {
+                this._stateMachine.defineState(CheckBox.STATE_UNCHECKED, true);
+                this._stateMachine.defineState(CheckBox.STATE_DISABLED);
+                this._stateMachine.defineState(CheckBox.STATE_CHECKED);
             };
             CheckBox.prototype.onTap = function (e) {
                 if (this._stateMachine.getCurrentState() === CheckBox.STATE_CHECKED) {
@@ -6990,6 +8519,125 @@ var WOZLLA;
         utils.Ease = Ease;
     })(utils = WOZLLA.utils || (WOZLLA.utils = {}));
 })(WOZLLA || (WOZLLA = {}));
+var WOZLLA;
+(function (WOZLLA) {
+    var DragonBones;
+    (function (DragonBones) {
+        var SkeletonRenderer = (function (_super) {
+            __extends(SkeletonRenderer, _super);
+            function SkeletonRenderer() {
+                _super.apply(this, arguments);
+            }
+            Object.defineProperty(SkeletonRenderer.prototype, &quot;skeletonSrc&quot;, {
+                get: function () {
+                    return this._skeletonSrc;
+                },
+                set: function (value) {
+                    this._skeletonSrc = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, &quot;textureSrc&quot;, {
+                get: function () {
+                    return this._textureSrc;
+                },
+                set: function (value) {
+                    this._textureSrc = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, &quot;armatureName&quot;, {
+                get: function () {
+                    return this._armatureName;
+                },
+                set: function (value) {
+                    this._armatureName = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(SkeletonRenderer.prototype, &quot;armature&quot;, {
+                get: function () {
+                    return this._armature;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            SkeletonRenderer.prototype.init = function () {
+                this.initArmature();
+                _super.prototype.init.call(this);
+            };
+            SkeletonRenderer.prototype.destroy = function () {
+                this._skeletonJSONAsset &amp;&amp; this._skeletonJSONAsset.release();
+                this._skeletonJSONAsset = null;
+                this._wTextureAtlas &amp;&amp; this._wTextureAtlas.release();
+                this._wTextureAtlas = null;
+                this._armature &amp;&amp; this._armature.dispose();
+                this._armature = null;
+                this._factory &amp;&amp; this._factory.dispose();
+                if (this._container) {
+                    this._container.destroy();
+                    this._container.removeMe();
+                    this._container = null;
+                }
+                _super.prototype.destroy.call(this);
+            };
+            SkeletonRenderer.prototype.render = function (renderer, flags) {
+                this._container.visit(renderer, this.transform, flags);
+            };
+            SkeletonRenderer.prototype.loadAssets = function (callback) {
+                var _this = this;
+                var assetLoader;
+                if (this._skeletonSrc &amp;&amp; this._textureSrc &amp;&amp; this._armatureName) {
+                    assetLoader = WOZLLA.Director.getInstance().assetLoader;
+                    assetLoader.load(this._skeletonSrc, WOZLLA.assets.JSONAsset, function () {
+                        var jsonAsset = assetLoader.getAsset(_this._skeletonSrc);
+                        if (!jsonAsset) {
+                            callback();
+                            return;
+                        }
+                        jsonAsset.retain();
+                        assetLoader.load(_this._textureSrc, DragonBones.WTextureAtlas, function () {
+                            var wTextureAtlas = assetLoader.getAsset(_this._textureSrc);
+                            if (!wTextureAtlas) {
+                                jsonAsset.release();
+                                callback();
+                                return;
+                            }
+                            wTextureAtlas.retain();
+                            _this._skeletonJSONAsset = jsonAsset;
+                            _this._wTextureAtlas = wTextureAtlas;
+                            callback();
+                        });
+                    });
+                }
+                else {
+                    callback();
+                }
+            };
+            SkeletonRenderer.prototype.initArmature = function () {
+                var skeletonData, factory, armature, container;
+                if (this._skeletonJSONAsset &amp;&amp; this._wTextureAtlas &amp;&amp; this._armatureName) {
+                    factory = new DragonBones.WFactory();
+                    skeletonData = this._skeletonJSONAsset.cloneData();
+                    factory.addSkeletonData(dragonBones.DataParser.parseDragonBonesData(skeletonData), skeletonData.name);
+                    factory.addTextureAtlas(this._wTextureAtlas, this._wTextureAtlas.name);
+                    armature = factory.buildArmature(this._armatureName);
+                    container = armature.getDisplay();
+                    dragonBones.WorldClock.clock.add(armature);
+                    DragonBones.setupWorldClock();
+                    this._container = container;
+                    this._factory = factory;
+                    this._armature = armature;
+                }
+            };
+            return SkeletonRenderer;
+        })(WOZLLA.Renderer);
+        DragonBones.SkeletonRenderer = SkeletonRenderer;
+    })(DragonBones = WOZLLA.DragonBones || (WOZLLA.DragonBones = {}));
+})(WOZLLA || (WOZLLA = {}));
 /// &lt;reference path=&quot;../../libs/DragonBones.d.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../src/core/GameObject.ts&quot;/&gt;
 var WOZLLA;
@@ -7136,12 +8784,24 @@ var WOZLLA;
 /// &lt;reference path=&quot;../../libs/DragonBones.d.ts&quot;/&gt;
 /// &lt;reference path=&quot;WSlot.ts&quot;/&gt;
 /// &lt;reference path=&quot;WTextureAtlas.ts&quot;/&gt;
+/// &lt;reference path=&quot;../../src/core/Scheduler.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../src/core/GameObject.ts&quot;/&gt;
 /// &lt;reference path=&quot;../../src/component/renderer/SpriteRenderer.ts&quot;/&gt;
 var WOZLLA;
 (function (WOZLLA) {
     var DragonBones;
     (function (DragonBones) {
+        var clockSetup = false;
+        function setupWorldClock() {
+            if (clockSetup) {
+                return;
+            }
+            clockSetup = true;
+            WOZLLA.Director.getInstance().scheduler.scheduleLoop(function () {
+                dragonBones.WorldClock.clock.advanceTime(1 / 60);
+            });
+        }
+        DragonBones.setupWorldClock = setupWorldClock;
         var WFactory = (function (_super) {
             __extends(WFactory, _super);
             function WFactory() {

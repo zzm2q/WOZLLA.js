@@ -58,9 +58,9 @@ module WOZLLA.PureMVC {
 
     WOZLLA.Component.register(ListView, {
         name: 'MVC.ListView',
-        properties: [{
-            extend: WOZLLA.PureMVC.AdapterView
-        }, {
+        properties: [
+        Component.extendConfig(AdapterView),
+        {
             name: 'itemViewSrc',
             type: 'string'
         }]

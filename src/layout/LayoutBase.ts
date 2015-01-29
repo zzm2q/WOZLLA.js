@@ -1,8 +1,8 @@
 module WOZLLA.layout {
 
-    export class LayoutBase extends Component {
+    export class LayoutBase extends Behaviour {
 
-        private _layoutSchedule;
+        private _layoutRequired:boolean = true;
 
         init():void {
             super.init();
@@ -21,16 +21,14 @@ module WOZLLA.layout {
         }
 
         requestLayout() {
-            if(this._layoutSchedule) return;
-            this._layoutSchedule = WOZLLA.Director.getInstance().scheduler.scheduleFrame(() => {
-                this.doLayout();
-                this._layoutSchedule = null;
-            });
+            this._layoutRequired = true;
         }
 
-        cancelLayout() {
-            this._layoutSchedule && WOZLLA.Director.getInstance().scheduler.removeSchedule(this._layoutSchedule);
-            this._layoutSchedule = null;
+        update() {
+            if(this._layoutRequired) {
+                this._layoutRequired = false;
+                this.doLayout();
+            }
         }
 
         protected onChildAdd(e) {

@@ -30,7 +30,7 @@ gameObj.loadAssets(function() {
 
 ## Current Features
 
-Version 0.5.1 (Released)
+Version 1.0 (Released)
 
 * WebGL Rendering
 * GameObject and Component

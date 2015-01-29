@@ -3,6 +3,4 @@ node_modules
 src/*/**.js
 .DS_Store
 examples/test.html
-tools/editor/Atom.app
-tools
 
