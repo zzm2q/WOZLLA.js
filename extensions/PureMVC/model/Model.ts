@@ -50,8 +50,10 @@ module WOZLLA.PureMVC {
         }
 
         setAll(data:any, silent:boolean=false) {
-            for(var field in data) {
-                this.set(field, data[field], silent);
+            for(var field in this.definedField) {
+                if(data.hasOwnProperty(field)) {
+                    this.set(field, data[field], silent);
+                }
             }
         }
 

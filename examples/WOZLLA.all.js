@@ -9821,7 +9821,7 @@ var WOZLLA;
                 case 'Right':
                     value |= RectTransform.ANCHOR_RIGHT;
                     break;
-                case 'Strength':
+                case 'HStrength':
                     value |= RectTransform.ANCHOR_HORIZONTAL_STRENGTH;
                     break;
                 default:
@@ -9835,7 +9835,7 @@ var WOZLLA;
                 case 'Bottom':
                     value |= RectTransform.ANCHOR_BOTTOM;
                     break;
-                case 'Strength':
+                case 'VStrength':
                     value |= RectTransform.ANCHOR_VERTICAL_STRENGTH;
                     break;
                 default:
@@ -10279,6 +10279,13 @@ var WOZLLA;
             config = Component.configMap[name];
             WOZLLA.Assert.isNotUndefined(config);
             return config;
+        };
+        Component.extendConfig = function (Type) {
+            var name = Component.getName(Type);
+            return {
+                group: name,
+                properties: Component.getConfig(name).properties
+            };
         };
         Component.ctorMap = {};
         Component.configMap = {};
@@ -12807,7 +12814,7 @@ var WOZLLA;
                     url: '',
                     async: true,
                     method: 'GET',
-                    contentType: 'text',
+                    dataType: 'text',
                     responseType: 'text/plain',
                     timeout: 30000,
                     success: empty,
@@ -12821,7 +12828,7 @@ var WOZLLA;
                     if (xhr.readyState === 4) {
                         xhr.onreadystatechange = empty;
                         clearTimeout(timeoutId);
-                        parser = contentParser[options.contentType] || function () {
+                        parser = contentParser[options.dataType] || function () {
                             return xhr.responseText;
                         };
                         options.success(parser(xhr));
@@ -12889,7 +12896,7 @@ var WOZLLA;
                 var _this = this;
                 WOZLLA.utils.Ajax.request({
                     url: this.fullPath,
-                    contentType: 'json',
+                    dataType: 'json',
                     success: function (data) {
                         _this._data = data;
                         onSuccess();
@@ -13271,7 +13278,7 @@ var WOZLLA;
                 var me = this;
                 WOZLLA.utils.Ajax.request({
                     url: me._metaSrc,
-                    contentType: 'json',
+                    dataType: 'json',
                     success: function (data) {
                         var imageSuffix = data.meta.image;
                         var metaFileName = getFileName(me._metaSrc);
@@ -15137,20 +15144,21 @@ var WOZLLA;
         component.NinePatchRenderer = NinePatchRenderer;
         WOZLLA.Component.register(NinePatchRenderer, {
             name: "NinePatchRenderer",
-            properties: [{
-                name: 'patch',
-                type: 'rect',
-                defaultValue: [0, 0, 0, 0],
-                convert: component.PropertyConverter.array2rect
-            }, {
-                name: 'renderRegion',
-                type: 'rect',
-                defaultValue: [0, 0, 0, 0],
-                convert: component.PropertyConverter.array2rect
-            }, {
-                group: 'SpriteRenderer',
-                properties: WOZLLA.Component.getConfig('SpriteRenderer').properties
-            }]
+            properties: [
+                WOZLLA.Component.extendConfig(component.SpriteRenderer),
+                {
+                    name: 'patch',
+                    type: 'rect',
+                    defaultValue: [0, 0, 0, 0],
+                    convert: component.PropertyConverter.array2rect
+                },
+                {
+                    name: 'renderRegion',
+                    type: 'rect',
+                    defaultValue: [0, 0, 0, 0],
+                    convert: component.PropertyConverter.array2rect
+                }
+            ]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
 })(WOZLLA || (WOZLLA = {}));
@@ -15475,7 +15483,8 @@ var WOZLLA;
             }, {
                 name: 'style',
                 type: 'object',
-                convert: component.PropertyConverter.json2TextStyle
+                convert: component.PropertyConverter.json2TextStyle,
+                editor: 'textStyle'
             }]
         });
     })(component = WOZLLA.component || (WOZLLA.component = {}));
@@ -15631,7 +15640,7 @@ var WOZLLA;
                 if (this.src && !this.data) {
                     WOZLLA.utils.Ajax.request({
                         url: WOZLLA.Director.getInstance().assetLoader.getBaseDir() + '/' + this.src,
-                        contentType: 'json',
+                        dataType: 'json',
                         async: this.async,
                         withCredentials: true,
                         success: function (data) {
@@ -15773,6 +15782,7 @@ var WOZLLA;
             __extends(LayoutBase, _super);
             function LayoutBase() {
                 _super.apply(this, arguments);
+                this._layoutRequired = true;
             }
             LayoutBase.prototype.init = function () {
                 _super.prototype.init.call(this);
@@ -15788,17 +15798,13 @@ var WOZLLA;
             LayoutBase.prototype.doLayout = function () {
             };
             LayoutBase.prototype.requestLayout = function () {
-                var _this = this;
-                if (this._layoutSchedule)
-                    return;
-                this._layoutSchedule = WOZLLA.Director.getInstance().scheduler.scheduleFrame(function () {
-                    _this.doLayout();
-                    _this._layoutSchedule = null;
-                });
+                this._layoutRequired = true;
             };
-            LayoutBase.prototype.cancelLayout = function () {
-                this._layoutSchedule && WOZLLA.Director.getInstance().scheduler.removeSchedule(this._layoutSchedule);
-                this._layoutSchedule = null;
+            LayoutBase.prototype.update = function () {
+                if (this._layoutRequired) {
+                    this._layoutRequired = false;
+                    this.doLayout();
+                }
             };
             LayoutBase.prototype.onChildAdd = function (e) {
                 this.requestLayout();
@@ -15808,7 +15814,7 @@ var WOZLLA;
                 this.requestLayout();
             };
             return LayoutBase;
-        })(WOZLLA.Component);
+        })(WOZLLA.Behaviour);
         layout.LayoutBase = LayoutBase;
     })(layout = WOZLLA.layout || (WOZLLA.layout = {}));
 })(WOZLLA || (WOZLLA = {}));

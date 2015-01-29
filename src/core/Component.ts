@@ -103,6 +103,14 @@ module WOZLLA {
             return config;
         }
 
+        public static extendConfig(Type:Function):any {
+            var name = Component.getName(Type);
+            return {
+                group: name,
+                properties: Component.getConfig(name).properties
+            };
+        }
+
     }
 
 }

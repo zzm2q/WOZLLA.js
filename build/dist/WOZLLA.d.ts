@@ -711,6 +711,7 @@ declare module WOZLLA {
          */
         static create(name: string): Component;
         static getConfig(name: any): any;
+        static extendConfig(Type: Function): any;
     }
 }
 declare module WOZLLA {
@@ -2260,13 +2261,13 @@ declare module WOZLLA.jsonx {
     }
 }
 declare module WOZLLA.layout {
-    class LayoutBase extends Component {
-        private _layoutSchedule;
+    class LayoutBase extends Behaviour {
+        private _layoutRequired;
         init(): void;
         destroy(): void;
         doLayout(): void;
         requestLayout(): void;
-        cancelLayout(): void;
+        update(): void;
         protected onChildAdd(e: any): void;
         protected onChildRemove(e: any): void;
     }

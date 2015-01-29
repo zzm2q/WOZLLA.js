@@ -100,7 +100,7 @@ module WOZLLA.jsonx {
             if(this.src && !this.data) {
                 WOZLLA.utils.Ajax.request({
                     url: Director.getInstance().assetLoader.getBaseDir() + '/' + this.src,
-                    contentType: 'json',
+                    dataType: 'json',
                     async: this.async,
                     withCredentials: true,
                     success: (data) => {

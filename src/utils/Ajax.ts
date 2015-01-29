@@ -59,7 +59,7 @@ module WOZLLA.utils {
                 url: '',
                 async: true,
                 method: 'GET',
-                contentType: 'text',
+                dataType: 'text',
                 responseType: 'text/plain',
                 timeout: 30000,
                 success: empty,
@@ -74,7 +74,7 @@ module WOZLLA.utils {
                 if (xhr.readyState === 4) {
                     xhr.onreadystatechange = empty;
                     clearTimeout(timeoutId);
-                    parser = contentParser[options.contentType] || function() {
+                    parser = contentParser[options.dataType] || function() {
                         return xhr.responseText;
                     };
                     options.success(parser(xhr));

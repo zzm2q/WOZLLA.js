@@ -271,7 +271,9 @@ module WOZLLA.component {
 
     Component.register(NinePatchRenderer, {
         name: "NinePatchRenderer",
-        properties: [{
+        properties: [
+        Component.extendConfig(SpriteRenderer),
+        {
             name: 'patch',
             type: 'rect',
             defaultValue: [0, 0, 0, 0],
@@ -281,9 +283,6 @@ module WOZLLA.component {
             type: 'rect',
             defaultValue: [0, 0, 0, 0],
             convert: PropertyConverter.array2rect
-        }, {
-            group: 'SpriteRenderer',
-            properties: Component.getConfig('SpriteRenderer').properties
         }]
     });
 
