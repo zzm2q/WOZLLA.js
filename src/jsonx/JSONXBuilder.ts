@@ -1,6 +1,5 @@
 module WOZLLA.jsonx {
 
-
     function emptyCallback(root:WOZLLA.GameObject, done:Function) {
         done();
     }

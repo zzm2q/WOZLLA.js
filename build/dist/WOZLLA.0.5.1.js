@@ -8294,6 +8294,379 @@ var WOZLLA;
         ui.CheckBox = CheckBox;
     })(ui = WOZLLA.ui || (WOZLLA.ui = {}));
 })(WOZLLA || (WOZLLA = {}));
+/// <reference path="../core/Component.ts"/>
+var WOZLLA;
+(function (WOZLLA) {
+    var ui;
+    (function (ui) {
+        function middle(a, b, c) {
+            return (a < b ? (b < c ? b : a < c ? c : a) : (b > c ? b : a > c ? c : a));
+        }
+        var ScrollRect = (function (_super) {
+            __extends(ScrollRect, _super);
+            function ScrollRect() {
+                _super.apply(this, arguments);
+                this._direction = ScrollRect.VERTICAL;
+                this._enabled = true;
+                this._bufferBackEnabled = true;
+                this._momentumEnabled = true;
+                this._dragMovedInLastSession = false;
+                this._values = {
+                    velocityX: 0,
+                    velocityY: 0,
+                    momentumX: 0,
+                    momentumY: 0,
+                    lastDragX: 0,
+                    lastDragY: 0,
+                    momentumXTween: undefined,
+                    momentumYTween: undefined,
+                    bufferXTween: undefined,
+                    bufferYTween: undefined
+                };
+            }
+            Object.defineProperty(ScrollRect.prototype, "direction", {
+                get: function () {
+                    return this._direction;
+                },
+                set: function (value) {
+                    this._direction = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "enabled", {
+                get: function () {
+                    return this._enabled;
+                },
+                set: function (value) {
+                    this._enabled = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "content", {
+                get: function () {
+                    return this._content;
+                },
+                set: function (value) {
+                    this._content = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "visibleWidth", {
+                get: function () {
+                    return this.gameObject.rectTransform.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "visibleHeight", {
+                get: function () {
+                    return this.gameObject.rectTransform.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "contentWidth", {
+                get: function () {
+                    return this._contentGameObject.rectTransform.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "contentHeight", {
+                get: function () {
+                    return this._contentGameObject.rectTransform.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "bufferBackEnabled", {
+                get: function () {
+                    return this._bufferBackEnabled;
+                },
+                set: function (value) {
+                    this._bufferBackEnabled = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(ScrollRect.prototype, "momentumEnabled", {
+                get: function () {
+                    return this._momentumEnabled;
+                },
+                set: function (value) {
+                    this._momentumEnabled = value;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            ScrollRect.prototype.listRequiredComponents = function () {
+                return [WOZLLA.RectTransform];
+            };
+            ScrollRect.prototype.init = function () {
+                if (this._content) {
+                    this._contentGameObject = this.gameObject.query(this._content);
+                }
+                this.gameObject.addListenerScope('dragstart', this.onDragStart, this);
+                this.gameObject.addListenerScope('drag', this.onDrag, this);
+                this.gameObject.addListenerScope('dragend', this.onDragEnd, this);
+                _super.prototype.init.call(this);
+            };
+            ScrollRect.prototype.destroy = function () {
+                this.gameObject.removeListenerScope('dragstart', this.onDragStart, this);
+                this.gameObject.removeListenerScope('drag', this.onDrag, this);
+                this.gameObject.removeListenerScope('dragend', this.onDragEnd, this);
+                _super.prototype.destroy.call(this);
+            };
+            ScrollRect.prototype.update = function () {
+                var _this = this;
+                if (!this._contentGameObject)
+                    return;
+                if (!this._bufferBackEnabled && !this._momentumEnabled)
+                    return;
+                var contentTrans = this._contentGameObject.rectTransform;
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.HORIZONTAL) {
+                    contentTrans.px += (this._values.velocityX + this._values.momentumX) * WOZLLA.Time.delta;
+                    var minScrollX = this.getMinScrollX();
+                    if (!this._bufferBackEnabled) {
+                        contentTrans.px = middle(contentTrans.px, minScrollX, 0);
+                    }
+                    var bufferMomentumX = false;
+                    if (contentTrans.px > 0 && this._values.velocityX !== 0) {
+                        contentTrans.px = 0;
+                        this._values.momentumX = this._values.velocityX;
+                        bufferMomentumX = true;
+                    }
+                    else if (contentTrans.px < minScrollX && this._values.velocityX !== 0) {
+                        contentTrans.px = minScrollX;
+                        this._values.momentumX = this._values.velocityX;
+                        bufferMomentumX = true;
+                    }
+                    if (bufferMomentumX) {
+                        if (this._values.momentumXTween) {
+                            this._values.momentumXTween.setPaused(true);
+                        }
+                        this._values.momentumXTween = WOZLLA.utils.Tween.get(this._values).to({
+                            momentumX: 0
+                        }, 100).call(function () {
+                            _this.tryBufferBackX();
+                        });
+                    }
+                }
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.VERTICAL) {
+                    contentTrans.py += (this._values.velocityY + this._values.momentumY) * WOZLLA.Time.delta;
+                    var minScrollY = this.getMinScrollY();
+                    if (!this._bufferBackEnabled) {
+                        contentTrans.py = middle(contentTrans.py, minScrollY, 0);
+                    }
+                    var bufferMomentumY = false;
+                    if (contentTrans.py > 0 && this._values.velocityY !== 0) {
+                        contentTrans.py = 0;
+                        this._values.momentumY = this._values.velocityY;
+                        bufferMomentumY = true;
+                    }
+                    else if (contentTrans.py < minScrollY && this._values.velocityY !== 0) {
+                        contentTrans.py = minScrollY;
+                        this._values.momentumY = this._values.velocityY;
+                        bufferMomentumY = true;
+                    }
+                    if (bufferMomentumY) {
+                        if (this._values.momentumYTween) {
+                            this._values.momentumYTween.setPaused(true);
+                        }
+                        this._values.momentumYTween = WOZLLA.utils.Tween.get(this._values).to({
+                            momentumY: 0
+                        }, 100).call(function () {
+                            _this.tryBufferBackY();
+                        });
+                    }
+                }
+            };
+            ScrollRect.prototype.isScrollable = function () {
+                return this._contentGameObject && ScrollRect.globalScrollEnabled && this._enabled;
+            };
+            ScrollRect.prototype.getMinScrollX = function () {
+                return this.visibleWidth - this.contentWidth;
+            };
+            ScrollRect.prototype.getMinScrollY = function () {
+                return this.visibleHeight - this.contentHeight;
+            };
+            ScrollRect.prototype.onDragStart = function (e) {
+                if (!this.isScrollable()) {
+                    return;
+                }
+                this._dragMovedInLastSession = true;
+                this._values.lastDragX = e.x;
+                this._values.lastDragY = e.y;
+                this._values.velocityX = 0;
+                this._values.velocityY = 0;
+                this._values.momentumX = 0;
+                this._values.momentumY = 0;
+                this._contentGameObject.rectTransform.clearTweens();
+                WOZLLA.utils.Tween.removeTweens(this);
+            };
+            ScrollRect.prototype.onDrag = function (e) {
+                if (!this.isScrollable()) {
+                    return;
+                }
+                var contentTrans = this._contentGameObject.rectTransform;
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.HORIZONTAL) {
+                    var deltaX = e.x - this._values.lastDragX;
+                    var minScrollX = this.getMinScrollX();
+                    if (minScrollX === 0 || (contentTrans.px >= 0 && deltaX > 0) || (contentTrans.px <= minScrollX && deltaX < 0)) {
+                        deltaX /= 10;
+                    }
+                    contentTrans.px += deltaX;
+                    this._values.lastDragX += deltaX;
+                    if (!this._bufferBackEnabled) {
+                        contentTrans.px = middle(contentTrans.px, minScrollX, 0);
+                    }
+                }
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.VERTICAL) {
+                    var deltaY = e.y - this._values.lastDragY;
+                    var minScrollY = this.getMinScrollY();
+                    if (minScrollY === 0 || (contentTrans.py >= 0 && deltaY > 0) || (contentTrans.py <= minScrollY && deltaY < 0)) {
+                        deltaY /= 10;
+                    }
+                    contentTrans.py += deltaY;
+                    this._values.lastDragY += deltaY;
+                    if (!this._bufferBackEnabled) {
+                        contentTrans.py = middle(contentTrans.py, minScrollY, 0);
+                    }
+                }
+            };
+            ScrollRect.prototype.onDragEnd = function (e) {
+                if (!this.isScrollable()) {
+                    return;
+                }
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.HORIZONTAL) {
+                    if (!this.tryBufferBackX()) {
+                        if (this._momentumEnabled) {
+                            this._values.velocityX = e.gesture.velocityX * (e.gesture.deltaX >= 0 ? 1 : -1);
+                            if (this._values.momentumXTween) {
+                                this._values.momentumXTween.setPaused(true);
+                            }
+                            this._values.momentumXTween = WOZLLA.utils.Tween.get(this._values).to({
+                                velocityX: 0
+                            }, 1000);
+                        }
+                        else {
+                            this._values.velocityX = 0;
+                            this._values.momentumY = 0;
+                        }
+                    }
+                }
+                if (this._direction === ScrollRect.BOTH || this._direction === ScrollRect.VERTICAL) {
+                    if (!this.tryBufferBackY()) {
+                        if (this._momentumEnabled) {
+                            this._values.velocityY = e.gesture.velocityY * (e.gesture.deltaY >= 0 ? 1 : -1);
+                            if (this._values.momentumYTween) {
+                                this._values.momentumYTween.setPaused(true);
+                            }
+                            this._values.momentumYTween = WOZLLA.utils.Tween.get(this._values).to({
+                                velocityY: 0
+                            }, 1000);
+                        }
+                        else {
+                            this._values.velocityY = 0;
+                            this._values.momentumY = 0;
+                        }
+                    }
+                }
+            };
+            ScrollRect.prototype.tryBufferBackX = function () {
+                if (!this._bufferBackEnabled) {
+                    return false;
+                }
+                var minScrollX = this.getMinScrollX();
+                var contentTrans = this._contentGameObject.rectTransform;
+                if (contentTrans.px > 0) {
+                    if (this._values.bufferXTween) {
+                        this._values.bufferXTween.setPaused(true);
+                    }
+                    this._values.bufferXTween = contentTrans.tween(false).to({
+                        px: 0
+                    }, 100);
+                    return true;
+                }
+                else if (contentTrans.px < minScrollX) {
+                    if (this._values.bufferXTween) {
+                        this._values.bufferXTween.setPaused(true);
+                    }
+                    this._values.bufferXTween = contentTrans.tween(false).to({
+                        px: minScrollX
+                    }, 100);
+                    return true;
+                }
+                return false;
+            };
+            ScrollRect.prototype.tryBufferBackY = function () {
+                if (!this._bufferBackEnabled) {
+                    return false;
+                }
+                var minScrollY = this.getMinScrollY();
+                var contentTrans = this._contentGameObject.rectTransform;
+                if (contentTrans.py > 0) {
+                    if (this._values.bufferYTween) {
+                        this._values.bufferYTween.setPaused(true);
+                    }
+                    this._values.bufferYTween = contentTrans.tween(false).to({
+                        py: 0
+                    }, 100);
+                    return true;
+                }
+                else if (contentTrans.py < minScrollY) {
+                    if (this._values.bufferYTween) {
+                        this._values.bufferYTween.setPaused(true);
+                    }
+                    this._values.bufferYTween = contentTrans.tween(false).to({
+                        py: minScrollY
+                    }, 100);
+                    return true;
+                }
+                return false;
+            };
+            ScrollRect.globalScrollEnabled = true;
+            ScrollRect.HORIZONTAL = 'Horizontal';
+            ScrollRect.VERTICAL = 'Vertical';
+            ScrollRect.BOTH = 'both';
+            return ScrollRect;
+        })(WOZLLA.Behaviour);
+        ui.ScrollRect = ScrollRect;
+        WOZLLA.Component.register(ScrollRect, {
+            name: 'UI.ScrollRect',
+            properties: [{
+                name: 'enabeld',
+                type: 'boolean',
+                defaultValue: true
+            }, {
+                name: 'direction',
+                type: 'string',
+                defaultValue: ScrollRect.VERTICAL,
+                editor: 'combobox',
+                data: [
+                    ScrollRect.HORIZONTAL,
+                    ScrollRect.VERTICAL,
+                    ScrollRect.BOTH
+                ]
+            }, {
+                name: 'content',
+                type: 'string',
+                defaultValue: ''
+            }, {
+                name: 'bufferBackEnabled',
+                type: 'boolean',
+                defaultValue: true
+            }, {
+                name: 'momentumEnabled',
+                type: 'boolean',
+                defaultValue: true
+            }]
+        });
+    })(ui = WOZLLA.ui || (WOZLLA.ui = {}));
+})(WOZLLA || (WOZLLA = {}));
 var WOZLLA;
 (function (WOZLLA) {
     var utils;

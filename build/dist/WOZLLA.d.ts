@@ -194,7 +194,7 @@ declare module WOZLLA.assets {
      * @extends WOZLLA.event.EventDispatcher
      * @abstract
      */
-    class Asset extends event.EventDispatcher {
+    class Asset extends WOZLLA.event.EventDispatcher {
         static EVENT_UNLOAD: string;
         /**
          * @property {string} src
@@ -220,7 +220,7 @@ declare module WOZLLA.assets {
          * @param onSuccess
          * @param onError
          */
-        load(onSuccess: () => any, onError: (error: any) => any): void;
+        load(onSuccess: () => any, onError: (error) => any): void;
         /**
          * unload this asset
          * @fires unload event
@@ -273,7 +273,7 @@ declare module WOZLLA.assets {
          * load all asset
          * @param items
          */
-        loadAll(items: AssetDescription[]): void;
+        loadAll(items: Array<AssetDescription>): void;
         /**
          * load an asset by src, AssetClass(constructor/factory)
          * @param src
@@ -477,13 +477,13 @@ declare module WOZLLA {
          * @property {WOZLLA.math.Matrix} worldMatrix
          * @readonly
          */
-        worldMatrix: math.Matrix;
+        worldMatrix: WOZLLA.math.Matrix;
         /**
          * specify this tranform
          * @type {boolean}
          */
         useGLCoords: boolean;
-        _values: number[];
+        _values: Array<number>;
         _relative: boolean;
         _dirty: boolean;
         constructor();
@@ -668,7 +668,7 @@ declare module WOZLLA {
      * @extends WOZLLA.event.EventDispatcher
      * @abstract
      */
-    class Component extends event.EventDispatcher {
+    class Component extends WOZLLA.event.EventDispatcher {
         /**
          * get the GameObject of this component belongs to.
          * @property {WOZLLA.GameObject} gameObject
@@ -690,7 +690,7 @@ declare module WOZLLA {
          */
         destroy(): void;
         loadAssets(callback: Function): void;
-        listRequiredComponents(): Function[];
+        listRequiredComponents(): Array<Function>;
         private static ctorMap;
         private static configMap;
         static getType(name: string): any;
@@ -709,7 +709,7 @@ declare module WOZLLA {
          * @param name the component name
          * @returns {WOZLLA.Component}
          */
-        static create(name: string): Component;
+        static create(name: string): WOZLLA.Component;
         static getConfig(name: any): any;
         static extendConfig(Type: Function): any;
     }
@@ -744,7 +744,7 @@ declare module WOZLLA {
      * @class WOZLLA.GameObject
      * @extends WOZLLA.event.EventDispatcher
      */
-    class GameObject extends event.EventDispatcher {
+    class GameObject extends WOZLLA.event.EventDispatcher {
         static MASK_TRANSFORM_DIRTY: number;
         static MASK_VISIBLE: number;
         /**
@@ -1009,13 +1009,13 @@ declare module WOZLLA {
          * @param parentTransform
          * @param flags
          */
-        visit(renderer: renderer.IRenderer, parentTransform: Transform, flags: number): number;
+        visit(renderer: WOZLLA.renderer.IRenderer, parentTransform: Transform, flags: number): number;
         /**
          * render this game object
          * @param renderer
          * @param flags
          */
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         /**
          * get a game object under the point.
          * @param x
@@ -1058,7 +1058,7 @@ declare module WOZLLA {
         _rootTransform: Transform;
         _viewRectTransform: RectTransform;
         constructor();
-        visitStage(renderer: renderer.IRenderer): void;
+        visitStage(renderer: WOZLLA.renderer.IRenderer): void;
     }
 }
 declare module WOZLLA {
@@ -1156,7 +1156,7 @@ declare module WOZLLA {
     }
 }
 declare module WOZLLA {
-    class GestureEvent extends event.Event {
+    class GestureEvent extends WOZLLA.event.Event {
         x: number;
         y: number;
         touch: any;
@@ -1215,7 +1215,7 @@ declare module WOZLLA.renderer {
         define(layer: string, zindex: number): void;
         undefine(layer: string): void;
         getZIndex(layer: string): number;
-        getSortedLayers(): string[];
+        getSortedLayers(): Array<string>;
     }
     module ILayerManager {
         /**
@@ -1239,8 +1239,8 @@ declare module WOZLLA.renderer {
         define(layer: string, zindex: number): void;
         undefine(layer: string): void;
         getZIndex(layer: string): number;
-        getSortedLayers(): string[];
-        _getSortedLayers(): string[];
+        getSortedLayers(): Array<string>;
+        _getSortedLayers(): Array<string>;
     }
 }
 declare module WOZLLA.renderer {
@@ -1309,7 +1309,7 @@ declare module WOZLLA.renderer {
         fragmentShader: any;
         useProgram(gl: any): void;
         syncUniforms(gl: any, uniforms: {
-            projection: any;
+            projection;
         }): any;
     }
     module IShaderProgram {
@@ -1351,7 +1351,7 @@ declare module WOZLLA.renderer {
         constructor(id: any, vertexShader: any, fragmentShader: any);
         useProgram(gl: any): void;
         syncUniforms(gl: any, uniforms: {
-            projection: any;
+            projection;
         }): void;
     }
 }
@@ -1359,14 +1359,14 @@ declare module WOZLLA.renderer.shader {
     /**
      * @class WOZLLA.renderer.shader.V2T2C1A1
      */
-    class V2T2C1A1 extends ShaderProgram implements IShaderProgram {
+    class V2T2C1A1 extends WOZLLA.renderer.ShaderProgram implements IShaderProgram {
         static VERTEX_SOURCE: string;
         static FRAGMENT_SOURCE: string;
         _locations: any;
         constructor(id: any, vertexShader: any, fragmentShader: any);
         useProgram(gl: any): void;
         syncUniforms(gl: any, uniforms: {
-            projection: any;
+            projection;
         }): void;
         _initLocaitions(gl: any): void;
         _activate(gl: any): void;
@@ -1492,18 +1492,18 @@ declare module WOZLLA {
          * @property {WOZLLA.renderer.IRenderer} renderer
          * @readonly
          */
-        renderer: renderer.IRenderer;
+        renderer: WOZLLA.renderer.IRenderer;
         /**
          * get the asset loader instance
          * @property {WOZLLA.assets.AssetLoader} assetLoader
          * @readonly
          */
-        assetLoader: assets.AssetLoader;
+        assetLoader: WOZLLA.assets.AssetLoader;
         /**
          * get the root instance of RectTransform
          * @returns {WOZLLA.RectTransform} viewRectTransform
          */
-        viewRectTransform: RectTransform;
+        viewRectTransform: WOZLLA.RectTransform;
         private _runing;
         private _paused;
         private _timeScale;
@@ -1538,31 +1538,31 @@ declare module WOZLLA.assets {
      */
     class GLTextureAsset extends Asset {
         glTexture: renderer.ITexture;
-        _glTexture: renderer.ITexture;
+        _glTexture: WOZLLA.renderer.ITexture;
         _generateTexture(image: HTMLImageElement): void;
         _generatePVRTexture(pvrSource: any): void;
     }
-    class HTMLImageDescriptor implements renderer.ITextureDescriptor {
+    class HTMLImageDescriptor implements WOZLLA.renderer.ITextureDescriptor {
         width: number;
         height: number;
         source: any;
-        textureFormat: renderer.TextureFormat;
-        pixelFormat: renderer.PixelFormat;
+        textureFormat: WOZLLA.renderer.TextureFormat;
+        pixelFormat: WOZLLA.renderer.PixelFormat;
         _source: any;
-        _textureFormat: renderer.TextureFormat;
-        _pixelFormat: renderer.PixelFormat;
+        _textureFormat: WOZLLA.renderer.TextureFormat;
+        _pixelFormat: WOZLLA.renderer.PixelFormat;
         constructor(source: any);
     }
-    class PVRDescriptor implements renderer.ITextureDescriptor {
+    class PVRDescriptor implements WOZLLA.renderer.ITextureDescriptor {
         width: number;
         height: number;
         source: any;
-        textureFormat: renderer.TextureFormat;
-        pixelFormat: renderer.PixelFormat;
+        textureFormat: WOZLLA.renderer.TextureFormat;
+        pixelFormat: WOZLLA.renderer.PixelFormat;
         _source: any;
-        _textureFormat: renderer.TextureFormat;
-        _pixelFormat: renderer.PixelFormat;
-        constructor(source: any, pixelFormat: renderer.PixelFormat);
+        _textureFormat: WOZLLA.renderer.TextureFormat;
+        _pixelFormat: WOZLLA.renderer.PixelFormat;
+        constructor(source: any, pixelFormat: WOZLLA.renderer.PixelFormat);
     }
 }
 declare module WOZLLA.utils {
@@ -1602,7 +1602,7 @@ declare module WOZLLA.assets {
     class JSONAsset extends Asset {
         _data: any;
         cloneData(): any;
-        load(onSuccess: () => any, onError: (error: any) => any): void;
+        load(onSuccess: () => any, onError: (error) => any): void;
         unload(): void;
     }
 }
@@ -1722,9 +1722,9 @@ declare module WOZLLA.assets {
          * @param onSuccess
          * @param onError
          */
-        load(onSuccess: () => any, onError: (error: any) => any): void;
-        _loadImage(callback: (error: string, image?: any) => any): void;
-        _loadSpriteAtlas(callback: (error: string, image?: any, spriteData?: any) => any): void;
+        load(onSuccess: () => any, onError: (error) => any): void;
+        _loadImage(callback: (error: string, image?) => any): void;
+        _loadSpriteAtlas(callback: (error: string, image?, spriteData?) => any): void;
     }
 }
 declare module WOZLLA.math {
@@ -1776,8 +1776,8 @@ declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.CircleCollider
      */
-    class CircleCollider extends Collider {
-        region: math.Circle;
+    class CircleCollider extends WOZLLA.Collider {
+        region: WOZLLA.math.Circle;
         collideXY(localX: number, localY: number): boolean;
         collide(collider: Collider): boolean;
     }
@@ -1786,7 +1786,7 @@ declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.MaskCollider
      */
-    class MaskCollider extends Collider {
+    class MaskCollider extends WOZLLA.Collider {
         collideXY(localX: number, localY: number): boolean;
         collide(collider: Collider): boolean;
     }
@@ -1795,9 +1795,9 @@ declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.RectCollider
      */
-    class RectCollider extends Collider {
+    class RectCollider extends WOZLLA.Collider {
         static fromSpriteRenderer(spriteRenderer: SpriteRenderer): RectCollider;
-        region: math.Rectangle;
+        region: WOZLLA.math.Rectangle;
         collideXY(localX: number, localY: number): boolean;
         collide(collider: Collider): boolean;
     }
@@ -1850,13 +1850,13 @@ declare module WOZLLA {
          * @param renderer
          * @param flags
          */
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         /**
          * do render mask graphics
          * @param renderer
          * @param flags
          */
-        protected renderMask(renderer: renderer.IRenderer, flags: number): void;
+        protected renderMask(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
     }
 }
 declare module WOZLLA {
@@ -1871,7 +1871,7 @@ declare module WOZLLA {
          * @param renderer
          * @param flags
          */
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
     }
 }
 declare module WOZLLA.renderer {
@@ -1919,7 +1919,7 @@ declare module WOZLLA.utils {
     class ObjectPool<T extends Poolable> {
         _minCount: any;
         _factory: any;
-        _pool: T[];
+        _pool: Array<T>;
         constructor(minCount: number, factory: () => T);
         retain(): T;
         release(obj: T): void;
@@ -1930,7 +1930,7 @@ declare module WOZLLA.renderer {
      * @class WOZLLA.renderer.QuadCommand
      * @extends WOZLLA.renderer.RenderCommandBase
      */
-    class QuadCommand extends RenderCommandBase implements utils.Poolable {
+    class QuadCommand extends RenderCommandBase implements WOZLLA.utils.Poolable {
         static init(globalZ: number, layer: string, texture: ITexture, materialId: string, quad: Quad): QuadCommand;
         isPoolable: boolean;
         texture: ITexture;
@@ -1949,8 +1949,8 @@ declare module WOZLLA.component {
      * @class WOZLLA.component.QuadRenderer
      * @abstract
      */
-    class QuadRenderer extends Renderer {
-        _quad: renderer.Quad;
+    class QuadRenderer extends WOZLLA.Renderer {
+        _quad: WOZLLA.renderer.Quad;
         _quadLayer: string;
         _quadMaterialId: string;
         _quadGlobalZ: number;
@@ -1959,7 +1959,7 @@ declare module WOZLLA.component {
         _quadVertexDirty: boolean;
         _quadAlphaDirty: boolean;
         _quadColorDirty: boolean;
-        _texture: renderer.ITexture;
+        _texture: WOZLLA.renderer.ITexture;
         _textureOffset: any;
         _textureFrame: any;
         _textureUVS: any;
@@ -1970,11 +1970,11 @@ declare module WOZLLA.component {
         setQuadMaterialId(materialId: string): void;
         setQuadAlpha(alpha: number): void;
         setQuadColor(color: number): void;
-        setTexture(texture: renderer.ITexture): void;
+        setTexture(texture: WOZLLA.renderer.ITexture): void;
         setTextureFrame(frame: any): void;
         setTextureOffset(offset: any): void;
         init(): void;
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         _initQuad(): void;
         _getTextureFrame(): any;
         _getTextureOffset(): any;
@@ -1992,22 +1992,22 @@ declare module WOZLLA.component {
      * @class WOZLLA.component.RectMask
      */
     class RectMask extends Mask {
-        region: math.Rectangle;
-        _helperGameObject: GameObject;
-        _region: math.Rectangle;
+        region: WOZLLA.math.Rectangle;
+        _helperGameObject: WOZLLA.GameObject;
+        _region: WOZLLA.math.Rectangle;
         _maskQuadRenderer: any;
-        protected renderMask(renderer: renderer.IRenderer, flags: number): void;
+        protected renderMask(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         private _initMaskQuadRenderer(renderer);
     }
 }
 declare module WOZLLA.component {
     class CanvasRenderer extends QuadRenderer {
-        canvasSize: math.Size;
+        canvasSize: WOZLLA.math.Size;
         canvasWidth: number;
         canvasHeight: number;
         _canvas: any;
         _context: any;
-        _canvasSize: math.Size;
+        _canvasSize: WOZLLA.math.Size;
         _glTexture: any;
         _graphicsDirty: boolean;
         _sizeDirty: boolean;
@@ -2047,8 +2047,8 @@ declare module WOZLLA.component {
 }
 declare module WOZLLA.component {
     class CircleRenderer extends PrimitiveRenderer {
-        circle: math.Circle;
-        _circle: math.Circle;
+        circle: WOZLLA.math.Circle;
+        _circle: WOZLLA.math.Circle;
         drawPrimitive(context: any): void;
         protected measurePrimitiveSize(): any;
         protected generateCanvasTexture(renderer: renderer.IRenderer): void;
@@ -2056,8 +2056,8 @@ declare module WOZLLA.component {
 }
 declare module WOZLLA.component {
     class RectRenderer extends PrimitiveRenderer {
-        rect: math.Rectangle;
-        _rect: math.Rectangle;
+        rect: WOZLLA.math.Rectangle;
+        _rect: WOZLLA.math.Rectangle;
         drawPrimitive(context: any): void;
         protected measurePrimitiveSize(): any;
         protected generateCanvasTexture(renderer: renderer.IRenderer): void;
@@ -2065,35 +2065,35 @@ declare module WOZLLA.component {
 }
 declare module WOZLLA.component {
     class PropertyConverter {
-        static array2rect(arr: number[]): math.Rectangle;
-        static array2circle(arr: number[]): math.Circle;
+        static array2rect(arr: Array<number>): WOZLLA.math.Rectangle;
+        static array2circle(arr: Array<number>): WOZLLA.math.Circle;
         static json2TextStyle(json: any): TextStyle;
-        static array2Padding(arr: number[]): layout.Padding;
-        static array2Margin(arr: number[]): layout.Margin;
+        static array2Padding(arr: Array<number>): WOZLLA.layout.Padding;
+        static array2Margin(arr: Array<number>): WOZLLA.layout.Margin;
     }
 }
 declare module WOZLLA.component {
     /**
      * @class WOZLLA.component.SpriteRenderer
      */
-    class SpriteRenderer extends QuadRenderer implements assets.proxy.IProxyTarget {
+    class SpriteRenderer extends QuadRenderer implements WOZLLA.assets.proxy.IProxyTarget {
         color: number;
         alpha: number;
         materialId: string;
         renderLayer: string;
         renderOrder: number;
-        sprite: assets.Sprite;
+        sprite: WOZLLA.assets.Sprite;
         spriteOffset: any;
         imageSrc: string;
         spriteAtlasSrc: string;
         spriteName: string;
-        _spriteProxy: assets.proxy.SpriteAtlasProxy;
-        _sprite: assets.Sprite;
+        _spriteProxy: WOZLLA.assets.proxy.SpriteAtlasProxy;
+        _sprite: WOZLLA.assets.Sprite;
         _spriteAtlasSrc: string;
         _spriteName: string;
         constructor();
         destroy(): void;
-        onAssetLoaded(asset: assets.Asset): void;
+        onAssetLoaded(asset: WOZLLA.assets.Asset): void;
         loadAssets(callback: Function): void;
     }
 }
@@ -2117,7 +2117,7 @@ declare module WOZLLA.component {
         pause(): void;
         resume(): void;
         stop(): void;
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         protected updateAnimationFrame(): void;
     }
 }
@@ -2126,16 +2126,16 @@ declare module WOZLLA.component {
      * @class WOZLLA.component.NinePatchRenderer
      */
     class NinePatchRenderer extends SpriteRenderer {
-        renderRegion: math.Rectangle;
-        patch: math.Rectangle;
-        _patch: math.Rectangle;
-        _renderRegion: math.Rectangle;
+        renderRegion: WOZLLA.math.Rectangle;
+        patch: WOZLLA.math.Rectangle;
+        _patch: WOZLLA.math.Rectangle;
+        _renderRegion: WOZLLA.math.Rectangle;
         _initQuad(): void;
         _updateNinePatchQuads(): void;
         _updateNinePatchQuadVertices(): void;
         _updateNinePatchQuadAlpha(): void;
         _updateNinePatchQuadColor(): void;
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
     }
 }
 declare module WOZLLA.component {
@@ -2216,7 +2216,7 @@ declare module WOZLLA {
      * @class WOZLLA.CoreEvent
      * @extends WOZLLA.event.Event
      */
-    class CoreEvent extends event.Event {
+    class CoreEvent extends WOZLLA.event.Event {
         /**
          * new a CoreEvent
          * @method constructor
@@ -2244,17 +2244,17 @@ declare module WOZLLA.jsonx {
         private uuidMap;
         getByUUID(uuid: any): any;
         setSync(): void;
-        instantiateWithSrc(src: any, callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
-        instantiateWithJSON(data: any, callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
-        load(callback?: (root: GameObject, done: Function) => void): JSONXBuilder;
+        instantiateWithSrc(src: any, callback?: (root: WOZLLA.GameObject, done: Function) => void): JSONXBuilder;
+        instantiateWithJSON(data: any, callback?: (root: WOZLLA.GameObject, done: Function) => void): JSONXBuilder;
+        load(callback?: (root: WOZLLA.GameObject, done: Function) => void): JSONXBuilder;
         init(): JSONXBuilder;
-        build(callback: (error: any, root: GameObject) => void): void;
-        protected _checkError(callback: (error: any, root: GameObject) => void): boolean;
+        build(callback: (error: any, root: WOZLLA.GameObject) => void): void;
+        protected _checkError(callback: (error: any, root: WOZLLA.GameObject) => void): boolean;
         protected _loadJSONData(callback: Function): void;
         protected _newGameObjectTree(callback: Function): void;
-        protected _newGameObject(data: any, callback: (gameObj: GameObject) => void): void;
-        protected _newReferenceObject(data: any, callback: (gameObj: GameObject) => void): void;
-        protected _newComponent(compData: any, gameObj: GameObject): Component;
+        protected _newGameObject(data: any, callback: (gameObj: WOZLLA.GameObject) => void): void;
+        protected _newReferenceObject(data: any, callback: (gameObj: WOZLLA.GameObject) => void): void;
+        protected _newComponent(compData: any, gameObj: WOZLLA.GameObject): WOZLLA.Component;
         protected _applyComponentProperties(component: any, properties: any, compData: any): void;
         protected _loadAssets(callback: Function): void;
         protected _init(): void;
@@ -2297,13 +2297,13 @@ declare module WOZLLA.math {
 }
 declare module WOZLLA.layout {
     class Grid extends LayoutBase {
-        listRequiredComponents(): Function[];
+        listRequiredComponents(): Array<Function>;
         padding: Padding;
         itemMargin: Margin;
         _padding: Padding;
         _itemMargin: Margin;
         doLayout(): void;
-        protected measureChildSize(child: GameObject, idx: number, size: math.Size): void;
+        protected measureChildSize(child: GameObject, idx: number, size: WOZLLA.math.Size): void;
     }
 }
 declare module WOZLLA.layout {
@@ -2495,7 +2495,7 @@ declare module WOZLLA.renderer {
     }
 }
 declare module WOZLLA.utils {
-    class StateMachine extends event.EventDispatcher {
+    class StateMachine extends WOZLLA.event.EventDispatcher {
         static INIT: string;
         static CHANGE: string;
         _defaultState: string;
@@ -2533,8 +2533,8 @@ declare module WOZLLA.ui {
      * @class WOZLLA.ui.StateWidget
      * @protected
      */
-    class StateWidget extends component.SpriteRenderer {
-        _stateMachine: utils.StateMachine;
+    class StateWidget extends WOZLLA.component.SpriteRenderer {
+        _stateMachine: WOZLLA.utils.StateMachine;
         constructor();
         init(): void;
         protected initStates(): void;
@@ -2581,6 +2581,54 @@ declare module WOZLLA.ui {
         setEnabled(enabled?: boolean): void;
         protected initStates(): void;
         protected onTap(e: any): void;
+    }
+}
+declare module WOZLLA.ui {
+    class ScrollRect extends Behaviour {
+        static globalScrollEnabled: boolean;
+        static HORIZONTAL: string;
+        static VERTICAL: string;
+        static BOTH: string;
+        direction: string;
+        enabled: boolean;
+        content: string;
+        visibleWidth: number;
+        visibleHeight: number;
+        contentWidth: number;
+        contentHeight: number;
+        bufferBackEnabled: boolean;
+        momentumEnabled: boolean;
+        _direction: string;
+        _enabled: boolean;
+        _bufferBackEnabled: boolean;
+        _momentumEnabled: boolean;
+        _content: string;
+        _dragMovedInLastSession: boolean;
+        _values: {
+            velocityX: number;
+            velocityY: number;
+            momentumX: number;
+            momentumY: number;
+            lastDragX: number;
+            lastDragY: number;
+            momentumXTween: any;
+            momentumYTween: any;
+            bufferXTween: any;
+            bufferYTween: any;
+        };
+        _contentGameObject: GameObject;
+        listRequiredComponents(): Array<Function>;
+        init(): void;
+        destroy(): void;
+        update(): void;
+        isScrollable(): boolean;
+        protected getMinScrollX(): number;
+        protected getMinScrollY(): number;
+        protected onDragStart(e: any): void;
+        protected onDrag(e: any): void;
+        protected onDragEnd(e: any): void;
+        protected tryBufferBackX(): boolean;
+        protected tryBufferBackY(): boolean;
     }
 }
 declare module WOZLLA.utils {
@@ -2663,7 +2711,7 @@ declare module WOZLLA.utils {
     }
 }
 declare module WOZLLA.DragonBones {
-    class SkeletonRenderer extends Renderer {
+    class SkeletonRenderer extends WOZLLA.Renderer {
         skeletonSrc: string;
         textureSrc: string;
         armatureName: string;
@@ -2675,10 +2723,10 @@ declare module WOZLLA.DragonBones {
         _wTextureAtlas: any;
         _armatureName: string;
         _armature: dragonBones.Armature;
-        _container: GameObject;
+        _container: WOZLLA.GameObject;
         init(): void;
         destroy(): void;
-        render(renderer: renderer.IRenderer, flags: number): void;
+        render(renderer: WOZLLA.renderer.IRenderer, flags: number): void;
         loadAssets(callback: Function): void;
         protected initArmature(): void;
     }
@@ -2707,11 +2755,11 @@ declare module WOZLLA.DragonBones {
     }
 }
 declare module WOZLLA.DragonBones {
-    class WTextureAtlas extends assets.SpriteAtlas implements dragonBones.ITextureAtlas {
+    class WTextureAtlas extends WOZLLA.assets.SpriteAtlas implements dragonBones.ITextureAtlas {
         name: string;
         dispose(): void;
         getRegion(subTextureName: string): dragonBones.Rectangle;
-        _loadSpriteAtlas(callback: (error: string, image?: any, spriteData?: any) => any): void;
+        _loadSpriteAtlas(callback: (error: string, image?, spriteData?) => any): void;
         _parseData(data: any): any;
     }
 }

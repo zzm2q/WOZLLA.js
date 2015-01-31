@@ -48,6 +48,8 @@ Version 1.0 (Released)
 
 ## Change Logs
 
+* add ScrollRect
+
 * Version 1.0 (Released)
 * add AnimationRenderer
 * add simple primitives: RectRenderer, CircleRenderer
@@ -56,6 +58,7 @@ Version 1.0 (Released)
 * Refactor DragonBones Support
 * Auto Assets Management
 * Support DragonBones
+
 * Version 0.5.1 (Released)
 
 ## RoadMap
@@ -63,6 +66,7 @@ Version 1.0 (Released)
 Version 1.5
 * Stability Optimization
 * Sound System
+* More UI components
 
 Version 2.0
 * Enhance the JSON file of GameObject structure, so users could simply build a GameObject tree with JSON files.
